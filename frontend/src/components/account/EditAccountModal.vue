@@ -734,7 +734,7 @@
 
       <!-- OpenAI/Grok OAuth Model Mapping (OAuth 类型没有 apikey 容器，需要独立的模型映射区域) -->
       <div
-        v-if="(account.platform === 'openai' || account.platform === 'grok' || account.platform === 'anthropic') && account.type === 'oauth'"
+        v-if="(account.platform === 'openai' || account.platform === 'grok' || account.platform === 'anthropic') && (account.type === 'oauth' || account.type === 'setup-token')"
         class="border-t border-gray-200 pt-4 dark:border-dark-600"
       >
         <label class="input-label">{{ t('admin.accounts.modelRestriction') }}</label>
@@ -5452,7 +5452,7 @@ const handleSubmit = async () => {
     // Anthropic OAuth/Setup Token: persist the account-level model mapping.
     // These account types do not have the API-key credential section, but their
     // Claude Code requests still honor credentials.model_mapping at forwarding.
-    if (props.account.platform === 'anthropic' && props.account.type === 'oauth') {
+    if (props.account.platform === 'anthropic') {
       const currentCredentials = (updatePayload.credentials as Record<string, unknown>) ||
         ((props.account.credentials as Record<string, unknown>) || {})
       const newCredentials: Record<string, unknown> = { ...currentCredentials }
