@@ -18,6 +18,22 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 )
 
+// defaultForceOpenAIImagesResponses resolves the persisted setting and falls
+// back to the deployment configuration when the setting has not been stored
+// yet (for example, on an existing installation upgraded in place).
+func (s *SettingService) defaultForceOpenAIImagesResponses(settings map[string]string) bool {
+	defaultValue := false
+	if s != nil && s.cfg != nil {
+		defaultValue = s.cfg.Gateway.ForceOpenAIImagesResponses
+	}
+	if settings != nil {
+		if value, ok := settings[SettingKeyForceOpenAIImagesResponses]; ok && value != "" {
+			return value == "true"
+		}
+	}
+	return defaultValue
+}
+
 // InitializeDefaultSettings 初始化默认设置
 func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 	// 检查是否已有设置
@@ -246,6 +262,7 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyOpenAICodexClientVersion:                           "",
 		SettingKeyOpenAICodexClientVersionSynced:                     "",
 		SettingKeyOpenAICodexVersionAutoSyncEnabled:                  "true",
+		SettingKeyForceOpenAIImagesResponses:                         strconv.FormatBool(s != nil && s.cfg != nil && s.cfg.Gateway.ForceOpenAIImagesResponses),
 		SettingKeyClaudeCodeClientVersion:                            "",
 		SettingKeyClaudeCodeClientVersionSynced:                      "",
 		SettingKeyClaudeCodeVersionAutoSyncEnabled:                   "true",
@@ -894,6 +911,7 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	} else {
 		result.OpenAICodexVersionAutoSyncEnabled = true
 	}
+	result.ForceOpenAIImagesResponses = s.defaultForceOpenAIImagesResponses(settings)
 	result.ClaudeCodeClientVersion = NormalizeClaudeCodeClientVersion(settings[SettingKeyClaudeCodeClientVersion])
 	result.ClaudeCodeClientVersionSynced = NormalizeClaudeCodeClientVersion(settings[SettingKeyClaudeCodeClientVersionSynced])
 	// 自动同步默认开启：缺失/空值一律视为开启，与 openai_codex_version_auto_sync_enabled 同一惯例。

@@ -52,6 +52,35 @@ func TestCodexDirectImagesRouting(t *testing.T) {
 	}
 }
 
+func TestShouldUseOpenAIImagesDirectHonorsForceResponses(t *testing.T) {
+	model := "gpt-image-2"
+	require.True(t, shouldUseOpenAIImagesDirect(context.Background(), false, model))
+	require.False(t, shouldUseOpenAIImagesDirect(context.Background(), true, model))
+	require.False(t, shouldUseOpenAIImagesDirect(withOpenAIImagesForceResponses(context.Background()), false, model))
+	require.False(t, shouldUseOpenAIImagesDirect(context.Background(), true, "gpt-5.6-luna"))
+}
+
+func TestCodexDirectImagesRoutingCanBeForcedToResponsesByConfig(t *testing.T) {
+	body := []byte(`{"model":"gpt-image-2","prompt":"draw"}`)
+	c, _ := newOpenAIImagesTestContext(t, body)
+	upstream := &codexModelsHTTPUpstreamStub{do: func(req *http.Request, _ string, _ int64, _ int) (*http.Response, error) {
+		require.Equal(t, "/backend-api/codex/responses", req.URL.Path)
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": {"text/event-stream"}},
+			Body:       io.NopCloser(strings.NewReader("data: {\"type\":\"response.completed\",\"response\":{\"output\":[{\"type\":\"image_generation_call\",\"result\":\"aGVsbG8=\"}]}}\n\n")),
+		}, nil
+	}}
+	svc := newOpenAIImagesTestService(upstream)
+	svc.cfg.Gateway.ForceOpenAIImagesResponses = true
+	parsed, err := svc.ParseOpenAIImagesRequest(c, body)
+	require.NoError(t, err)
+
+	result, err := svc.ForwardImages(context.Background(), c, directImagesTestAccount(), body, parsed, "")
+	require.NoError(t, err)
+	require.Equal(t, "/backend-api/codex/responses", result.UpstreamEndpoint)
+}
+
 func TestCodexDirectImagesMappingBeforeRouting(t *testing.T) {
 	for _, accountType := range []string{AccountTypeOAuth, AccountTypeSetupToken} {
 		t.Run(accountType, func(t *testing.T) {

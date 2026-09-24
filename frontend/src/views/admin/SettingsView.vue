@@ -4502,6 +4502,17 @@
               </h2>
             </div>
             <div class="p-6 space-y-4">
+                <div class="flex items-center justify-between rounded-lg border border-gray-200 p-4 dark:border-dark-700">
+                  <div class="pr-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {{ t("admin.settings.gatewayForwarding.forceOpenAIImagesResponses") }}
+                    </label>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      {{ t("admin.settings.gatewayForwarding.forceOpenAIImagesResponsesDesc") }}
+                    </p>
+                  </div>
+                  <Toggle v-model="form.force_openai_images_responses" />
+                </div>
                 <div>
                   <h3 class="text-base font-semibold text-gray-900 dark:text-white">
                     {{ t("admin.settings.gatewayForwarding.codexClientRestrictionTitle") }}
@@ -9987,6 +9998,7 @@ const form = reactive<SettingsForm>({
   // 只读展示：自动同步任务写入的官方最新稳定版，不参与提交（提交载荷按字段显式构造）
   openai_codex_client_version_synced: "",
   openai_codex_version_auto_sync_enabled: true,
+  force_openai_images_responses: false,
   claude_code_client_version: "",
   // 只读展示：自动同步任务写入的官方最新稳定版，不参与提交（提交载荷按字段显式构造）
   claude_code_client_version_synced: "",
@@ -11619,6 +11631,7 @@ async function saveSettings() {
         form.openai_codex_client_version?.trim() || "",
       openai_codex_version_auto_sync_enabled:
         form.openai_codex_version_auto_sync_enabled,
+      force_openai_images_responses: form.force_openai_images_responses,
       claude_code_client_version: form.claude_code_client_version?.trim() || "",
       claude_code_version_auto_sync_enabled:
         form.claude_code_version_auto_sync_enabled,

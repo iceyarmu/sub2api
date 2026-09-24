@@ -64,6 +64,7 @@ type cachedGatewayForwardingSettings struct {
 	anthropicCacheTTL1hInjection     bool
 	rewriteMessageCacheControl       bool
 	clientDatelineNormalization      bool
+	forceOpenAIImagesResponses       bool
 	expiresAt                        int64 // unix nano
 }
 
@@ -848,6 +849,7 @@ type gatewayForwardingSettingsResult struct {
 	openAITTFTMode                                                                        string
 	fp, mp, cch, claudeOAuthSystemPromptInjection, cacheTTL1h, rewriteMessageCacheControl bool
 	clientDatelineNormalization                                                           bool
+	forceOpenAIImagesResponses                                                            bool
 	claudeOAuthSystemPrompt, claudeOAuthSystemPromptBlocks                                string
 }
 
@@ -865,6 +867,7 @@ func (s *SettingService) getGatewayForwardingSettingsCached(ctx context.Context)
 				cacheTTL1h:                       cached.anthropicCacheTTL1hInjection,
 				rewriteMessageCacheControl:       cached.rewriteMessageCacheControl,
 				clientDatelineNormalization:      cached.clientDatelineNormalization,
+				forceOpenAIImagesResponses:       cached.forceOpenAIImagesResponses,
 			}
 		}
 	}
@@ -882,6 +885,7 @@ func (s *SettingService) getGatewayForwardingSettingsCached(ctx context.Context)
 					cacheTTL1h:                       cached.anthropicCacheTTL1hInjection,
 					rewriteMessageCacheControl:       cached.rewriteMessageCacheControl,
 					clientDatelineNormalization:      cached.clientDatelineNormalization,
+					forceOpenAIImagesResponses:       cached.forceOpenAIImagesResponses,
 				}, nil
 			}
 		}
@@ -898,6 +902,7 @@ func (s *SettingService) getGatewayForwardingSettingsCached(ctx context.Context)
 			SettingKeyEnableAnthropicCacheTTL1hInjection,
 			SettingKeyRewriteMessageCacheControl,
 			SettingKeyEnableClientDatelineNormalization,
+			SettingKeyForceOpenAIImagesResponses,
 		})
 		if err != nil {
 			slog.Warn("failed to get gateway forwarding settings", "error", err)
@@ -910,9 +915,10 @@ func (s *SettingService) getGatewayForwardingSettingsCached(ctx context.Context)
 				anthropicCacheTTL1hInjection:     false,
 				rewriteMessageCacheControl:       s.defaultRewriteMessageCacheControl(),
 				clientDatelineNormalization:      true,
+				forceOpenAIImagesResponses:       s.defaultForceOpenAIImagesResponses(nil),
 				expiresAt:                        time.Now().Add(gatewayForwardingErrorTTL).UnixNano(),
 			})
-			return gatewayForwardingSettingsResult{openAITTFTMode: OpenAITTFTModeSemantic, fp: true, claudeOAuthSystemPromptInjection: true, rewriteMessageCacheControl: s.defaultRewriteMessageCacheControl(), clientDatelineNormalization: true}, nil
+			return gatewayForwardingSettingsResult{openAITTFTMode: OpenAITTFTModeSemantic, fp: true, claudeOAuthSystemPromptInjection: true, rewriteMessageCacheControl: s.defaultRewriteMessageCacheControl(), clientDatelineNormalization: true, forceOpenAIImagesResponses: s.defaultForceOpenAIImagesResponses(nil)}, nil
 		}
 		ttftMode := normalizeOpenAITTFTMode(values[SettingKeyOpenAITTFTMode])
 		fp := true
@@ -936,6 +942,7 @@ func (s *SettingService) getGatewayForwardingSettingsCached(ctx context.Context)
 		if v, ok := values[SettingKeyEnableClientDatelineNormalization]; ok && v != "" {
 			clientDatelineNormalization = v == "true"
 		}
+		forceOpenAIImagesResponses := s.defaultForceOpenAIImagesResponses(values)
 		gatewayForwardingCache.Store(&cachedGatewayForwardingSettings{
 			openAITTFTMode:                   ttftMode,
 			fingerprintUnification:           fp,
@@ -947,6 +954,7 @@ func (s *SettingService) getGatewayForwardingSettingsCached(ctx context.Context)
 			anthropicCacheTTL1hInjection:     cacheTTL1h,
 			rewriteMessageCacheControl:       rewriteMessageCacheControl,
 			clientDatelineNormalization:      clientDatelineNormalization,
+			forceOpenAIImagesResponses:       forceOpenAIImagesResponses,
 			expiresAt:                        time.Now().Add(gatewayForwardingCacheTTL).UnixNano(),
 		})
 		return gatewayForwardingSettingsResult{
@@ -960,12 +968,25 @@ func (s *SettingService) getGatewayForwardingSettingsCached(ctx context.Context)
 			cacheTTL1h:                       cacheTTL1h,
 			rewriteMessageCacheControl:       rewriteMessageCacheControl,
 			clientDatelineNormalization:      clientDatelineNormalization,
+			forceOpenAIImagesResponses:       forceOpenAIImagesResponses,
 		}, nil
 	})
 	if r, ok := val.(gatewayForwardingSettingsResult); ok {
 		return r
 	}
-	return gatewayForwardingSettingsResult{fp: true, claudeOAuthSystemPromptInjection: true, clientDatelineNormalization: true}
+	return gatewayForwardingSettingsResult{fp: true, claudeOAuthSystemPromptInjection: true, clientDatelineNormalization: true, forceOpenAIImagesResponses: s.defaultForceOpenAIImagesResponses(nil)}
+}
+
+// IsOpenAIImagesForceResponsesEnabled reports whether OpenAI OAuth image requests
+// should bypass the native Codex Images endpoint.
+func (s *SettingService) IsOpenAIImagesForceResponsesEnabled(ctx context.Context) bool {
+	if s == nil {
+		return false
+	}
+	if s.settingRepo == nil {
+		return s.defaultForceOpenAIImagesResponses(nil)
+	}
+	return s.getGatewayForwardingSettingsCached(ctx).forceOpenAIImagesResponses
 }
 
 // GetOpenAITTFTMode 返回 Responses first_token_ms 的统计口径。

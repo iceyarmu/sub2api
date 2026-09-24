@@ -710,6 +710,8 @@ const (
 	SettingKeyOpenAICodexClientVersionSynced = "openai_codex_client_version_synced"
 	// SettingKeyOpenAICodexVersionAutoSyncEnabled 是否启用 Codex 客户端版本号自动同步（默认 true）。
 	SettingKeyOpenAICodexVersionAutoSyncEnabled = "openai_codex_version_auto_sync_enabled"
+	// SettingKeyForceOpenAIImagesResponses 是否强制 OpenAI OAuth 图片请求走 Responses 兼容端点。
+	SettingKeyForceOpenAIImagesResponses = "force_openai_images_responses"
 	// SettingKeyClaudeCodeClientVersion 网关对 Anthropic 上游声明的 Claude Code CLI 客户端版本号（管理员覆写）。
 	// 空值表示跟随自动同步值；自动同步也没有结果时回退到 claude.CLIVersion()（环境变量覆盖 + 内置基线）。
 	// 版本太旧会被 Anthropic 拒绝（claude_code_version_too_old），故该值需保持跟随官方发布。

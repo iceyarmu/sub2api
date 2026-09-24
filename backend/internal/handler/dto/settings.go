@@ -217,6 +217,7 @@ type SystemSettings struct {
 	OpenAICodexClientVersion               string `json:"openai_codex_client_version"`
 	OpenAICodexClientVersionSynced         string `json:"openai_codex_client_version_synced"`
 	OpenAICodexVersionAutoSyncEnabled      bool   `json:"openai_codex_version_auto_sync_enabled"`
+	ForceOpenAIImagesResponses             bool   `json:"force_openai_images_responses"`
 	ClaudeCodeClientVersion                string `json:"claude_code_client_version"`
 	ClaudeCodeClientVersionSynced          string `json:"claude_code_client_version_synced"`
 	ClaudeCodeVersionAutoSyncEnabled       bool   `json:"claude_code_version_auto_sync_enabled"`

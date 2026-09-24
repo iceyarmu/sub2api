@@ -27,6 +27,10 @@ func isOpenAIImagesForceResponses(ctx context.Context) bool {
 	return forced
 }
 
+func shouldUseOpenAIImagesDirect(ctx context.Context, forceResponses bool, model string) bool {
+	return usesCodexDirectImages(model) && !forceResponses && !isOpenAIImagesForceResponses(ctx)
+}
+
 // 显式列出已接入的模型，不把未来模型或未知快照自动送到直调端点。
 func usesCodexDirectImages(model string) bool {
 	switch strings.TrimSpace(model) {
