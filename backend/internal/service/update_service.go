@@ -28,9 +28,10 @@ var (
 )
 
 const (
-	updateCacheKey = "update_check_cache"
-	updateCacheTTL = 1200 // 20 minutes
-	githubRepo     = "Wei-Shaw/sub2api"
+	updateCacheKey     = "update_check_cache"
+	updateCacheTTL     = 1200 // 20 minutes
+	githubRepo         = "Wei-Shaw/sub2api"
+	githubDownloadRepo = "iceyarmu/sub2api"
 
 	// Security: allowed download domains for updates
 	allowedDownloadHost = "github.com"
@@ -352,7 +353,7 @@ func (s *UpdateService) RollbackToVersion(ctx context.Context, version string) e
 	for i, a := range match.Assets {
 		assets[i] = Asset{
 			Name:        a.Name,
-			DownloadURL: a.BrowserDownloadURL,
+			DownloadURL: githubReleaseAssetDownloadURL(match.TagName, a.Name, a.BrowserDownloadURL),
 			Size:        a.Size,
 		}
 	}
@@ -411,7 +412,7 @@ func (s *UpdateService) fetchLatestRelease(ctx context.Context) (*UpdateInfo, er
 	for i, a := range release.Assets {
 		assets[i] = Asset{
 			Name:        a.Name,
-			DownloadURL: a.BrowserDownloadURL,
+			DownloadURL: githubReleaseAssetDownloadURL(release.TagName, a.Name, a.BrowserDownloadURL),
 			Size:        a.Size,
 		}
 	}
@@ -430,6 +431,24 @@ func (s *UpdateService) fetchLatestRelease(ctx context.Context) (*UpdateInfo, er
 		Cached:    false,
 		BuildType: s.buildType,
 	}, nil
+}
+
+// githubReleaseAssetDownloadURL keeps release discovery on githubRepo while
+// routing package downloads through the maintained fork. The API response is
+// still authoritative for the release tag and asset name; only the repository
+// owner used for the download is changed.
+func githubReleaseAssetDownloadURL(tag, assetName, fallback string) string {
+	tag = strings.TrimSpace(tag)
+	assetName = strings.TrimSpace(assetName)
+	if tag == "" || assetName == "" {
+		return fallback
+	}
+	return fmt.Sprintf(
+		"https://github.com/%s/releases/download/%s/%s",
+		githubDownloadRepo,
+		url.PathEscape(tag),
+		url.PathEscape(assetName),
+	)
 }
 
 func (s *UpdateService) downloadFile(ctx context.Context, downloadURL, dest string) error {

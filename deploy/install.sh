@@ -32,6 +32,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 GITHUB_REPO="Wei-Shaw/sub2api"
+DOWNLOAD_GITHUB_REPO="iceyarmu/sub2api"
 INSTALL_DIR="/opt/sub2api"
 SERVICE_NAME="sub2api"
 SERVICE_USER="sub2api"
@@ -617,8 +618,8 @@ get_current_version() {
 download_and_extract() {
     local version_num=${LATEST_VERSION#v}
     local archive_name="sub2api_${version_num}_${OS}_${ARCH}.tar.gz"
-    local download_url="https://github.com/${GITHUB_REPO}/releases/download/${LATEST_VERSION}/${archive_name}"
-    local checksum_url="https://github.com/${GITHUB_REPO}/releases/download/${LATEST_VERSION}/checksums.txt"
+    local download_url="https://github.com/${DOWNLOAD_GITHUB_REPO}/releases/download/${LATEST_VERSION}/${archive_name}"
+    local checksum_url="https://github.com/${DOWNLOAD_GITHUB_REPO}/releases/download/${LATEST_VERSION}/checksums.txt"
 
     print_info "$(msg 'downloading') ${archive_name}..."
 

@@ -31,13 +31,17 @@ type updateServiceGitHubClientStub struct {
 	release        *GitHubRelease
 	recentReleases []*GitHubRelease
 	recentErr      error
+	latestRepo     string
+	recentRepo     string
 }
 
-func (s *updateServiceGitHubClientStub) FetchLatestRelease(context.Context, string) (*GitHubRelease, error) {
+func (s *updateServiceGitHubClientStub) FetchLatestRelease(_ context.Context, repo string) (*GitHubRelease, error) {
+	s.latestRepo = repo
 	return s.release, nil
 }
 
-func (s *updateServiceGitHubClientStub) FetchRecentReleases(context.Context, string, int) ([]*GitHubRelease, error) {
+func (s *updateServiceGitHubClientStub) FetchRecentReleases(_ context.Context, repo string, _ int) ([]*GitHubRelease, error) {
+	s.recentRepo = repo
 	return s.recentReleases, s.recentErr
 }
 
@@ -67,6 +71,36 @@ func TestUpdateServicePerformUpdateNoUpdateReturnsSentinel(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, errors.Is(err, ErrNoUpdateAvailable))
 	require.ErrorIs(t, err, ErrNoUpdateAvailable)
+}
+
+func TestGithubReleaseAssetDownloadURLUsesDownloadRepository(t *testing.T) {
+	fallback := "https://github.com/Wei-Shaw/sub2api/releases/download/v1.2.3/sub2api_linux_amd64.tar.gz"
+
+	require.Equal(t,
+		"https://github.com/iceyarmu/sub2api/releases/download/v1.2.3/sub2api_linux_amd64.tar.gz",
+		githubReleaseAssetDownloadURL("v1.2.3", "sub2api_linux_amd64.tar.gz", fallback),
+	)
+	require.Equal(t, fallback, githubReleaseAssetDownloadURL("", "sub2api_linux_amd64.tar.gz", fallback))
+	require.Equal(t, fallback, githubReleaseAssetDownloadURL("v1.2.3", "", fallback))
+}
+
+func TestUpdateServiceKeepsCheckRepositoryAndUsesDownloadRepository(t *testing.T) {
+	client := &updateServiceGitHubClientStub{
+		release: &GitHubRelease{
+			TagName: "v1.2.3",
+			Assets: []GitHubAsset{{
+				Name:               "sub2api_linux_amd64.tar.gz",
+				BrowserDownloadURL: "https://github.com/Wei-Shaw/sub2api/releases/download/v1.2.3/sub2api_linux_amd64.tar.gz",
+			}},
+		},
+	}
+	svc := NewUpdateService(&updateServiceCacheStub{}, client, "1.2.2", "release")
+
+	info, err := svc.CheckUpdate(context.Background(), true)
+
+	require.NoError(t, err)
+	require.Equal(t, githubRepo, client.latestRepo)
+	require.Equal(t, "https://github.com/iceyarmu/sub2api/releases/download/v1.2.3/sub2api_linux_amd64.tar.gz", info.ReleaseInfo.Assets[0].DownloadURL)
 }
 
 func newRollbackTestService(current string, releases []*GitHubRelease) *UpdateService {
