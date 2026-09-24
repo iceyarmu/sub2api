@@ -281,8 +281,8 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 	// - OAuth/SetupToken 账号：使用 Anthropic 标准映射（短ID → 长ID）
 	mappedModel := reqModel
 	mappingSource := ""
-	if account.Type == AccountTypeAPIKey {
-		mappedModel = account.GetMappedModel(reqModel)
+	if candidate, matched := account.ResolveMappedModel(reqModel); matched {
+		mappedModel = candidate
 		if mappedModel != reqModel {
 			mappingSource = "account"
 		}
