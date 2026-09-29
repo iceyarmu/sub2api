@@ -2,6 +2,8 @@ name: Release
 
 on:
   push:
+    branches:
+      - release
     tags:
       - 'v*'
   workflow_dispatch:
@@ -10,6 +12,7 @@ on:
         description: 'Tag to release (or a branch/ref for dry run)'
         required: true
         type: string
+        default: release
       simple_release:
         description: 'Simple release: only x86_64 GHCR image, skip other artifacts'
         required: false
@@ -54,7 +57,7 @@ jobs:
       - name: Checkout selected application source
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ inputs.tag || github.sha }}
           fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
@@ -229,6 +232,15 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache: false
+      - name: Create release tag at the verified source commit
+        if: ${{ env.DRY_RUN != 'true' }}
+        run: |
+          if git rev-parse --verify "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
+          else
+            git tag "$RELEASE_TAG" "$RELEASE_SHA"
+          fi
+          git push origin "refs/tags/$RELEASE_TAG"
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
