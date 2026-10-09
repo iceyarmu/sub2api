@@ -112,11 +112,11 @@ func (s *GatewayService) ForwardCountTokens(ctx context.Context, c *gin.Context,
 
 	// 应用模型映射：
 	// - APIKey 账号：使用账号级别的显式映射（如果配置），否则透传原始模型名
-	// - OAuth/SetupToken 账号：使用 Anthropic 标准映射（短ID → 长ID）
+	// - OAuth/SetupToken 账号：优先使用账号映射，否则使用 Anthropic 标准映射（短ID → 长ID）
 	if reqModel != "" {
 		mappedModel := reqModel
 		mappingSource := ""
-		if account.Type == AccountTypeAPIKey {
+		if account.Type == AccountTypeAPIKey || account.IsAnthropicOAuthOrSetupToken() {
 			mappedModel = account.GetMappedModel(reqModel)
 			if mappedModel != reqModel {
 				mappingSource = "account"
