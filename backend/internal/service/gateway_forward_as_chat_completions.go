@@ -107,6 +107,8 @@ func (s *GatewayService) ForwardAsChatCompletions(
 		anthropicBody = s.applyClaudeCodeOAuthMimicryToBody(ctx, c, account, anthropicBody, anthropicReq.System, mappedModel)
 	}
 	if s.shouldInjectAnthropicCacheTTL1h(ctx, account) {
+		// Chat Completions clients need message breakpoints even without cache hints.
+		anthropicBody = addMessageCacheBreakpoints(anthropicBody)
 		anthropicBody = injectAnthropicCacheControlTTL1h(anthropicBody)
 	}
 

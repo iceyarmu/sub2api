@@ -35,6 +35,7 @@ func TestForwardAsChatCompletions_GlobalCacheTTL1hInjection(t *testing.T) {
 					svc := &GatewayService{cfg: cfg, httpUpstream: upstream,
 						settingService: NewSettingService(&gatewayTTLSettingRepo{data: map[string]string{
 							SettingKeyEnableAnthropicCacheTTL1hInjection: fmt.Sprint(enabled),
+							SettingKeyRewriteMessageCacheControl:         "false",
 						}}, cfg),
 					}
 					account := &Account{ID: 1, Platform: PlatformAnthropic, Type: accountType,
@@ -59,12 +60,55 @@ func TestForwardAsChatCompletions_GlobalCacheTTL1hInjection(t *testing.T) {
 					wantTTL := "5m"
 					if enabled {
 						wantTTL = "1h"
+						require.NotEmpty(t, messages, "1h injection must also cache the conversation without client cache hints")
 					}
 					for _, path := range paths {
 						require.Equal(t, wantTTL, gjson.GetBytes(upstream.lastBody, path+".ttl").String(), path)
 					}
 				})
 			}
+		}
+	}
+}
+
+func TestForwardAsChatCompletions_CacheTTL1hWithoutOtherCacheInjection(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, enabled := range []bool{false, true} {
+		for _, stream := range []bool{false, true} {
+			t.Run(fmt.Sprintf("enabled=%t/stream=%t", enabled, stream), func(t *testing.T) {
+				resetGatewayForwardingSettingsCacheForTest(t)
+				cfg := &config.Config{}
+				upstream := &anthropicHTTPUpstreamRecorder{resp: &http.Response{
+					StatusCode: http.StatusOK,
+					Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+					Body:       io.NopCloser(strings.NewReader(namespaceToolAnthropicStream())),
+				}}
+				svc := &GatewayService{cfg: cfg, httpUpstream: upstream,
+					settingService: NewSettingService(&gatewayTTLSettingRepo{data: map[string]string{
+						SettingKeyEnableAnthropicCacheTTL1hInjection:     fmt.Sprint(enabled),
+						SettingKeyEnableClaudeOAuthSystemPromptInjection: "false",
+						SettingKeyRewriteMessageCacheControl:             "false",
+					}}, cfg),
+				}
+				account := &Account{ID: 1, Platform: PlatformAnthropic, Type: AccountTypeSetupToken,
+					Credentials: map[string]any{"access_token": "test-token"},
+				}
+				body := []byte(fmt.Sprintf(`{"model":"claude-haiku-4-5-20251001","stream":%t,"messages":[{"role":"user","content":"Hello"}]}`, stream))
+				c, _ := gin.CreateTestContext(httptest.NewRecorder())
+				c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader(string(body)))
+				_, err := svc.ForwardAsChatCompletions(context.Background(), c, account, body, nil)
+				require.NoError(t, err)
+				_, messages, tools, system := collectCacheControlPaths(upstream.lastBody)
+				require.Empty(t, tools)
+				require.Empty(t, system)
+				if enabled {
+					require.Equal(t, []string{"messages.0.content.0.cache_control"}, messages)
+					require.Equal(t, "ephemeral", gjson.GetBytes(upstream.lastBody, messages[0]+".type").String())
+					require.Equal(t, "1h", gjson.GetBytes(upstream.lastBody, messages[0]+".ttl").String())
+				} else {
+					require.Empty(t, messages)
+				}
+			})
 		}
 	}
 }
