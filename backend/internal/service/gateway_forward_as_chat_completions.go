@@ -65,6 +65,11 @@ func (s *GatewayService) ForwardAsChatCompletions(
 			mappedModel = normalized
 		}
 	}
+	modelPlatform, _ := DetectModelPlatform(mappedModel)
+	if modelPlatform == PlatformAnthropic {
+		responsesReq.Temperature = nil
+		body, _ = deleteJSONPathBytes(body, "temperature")
+	}
 	if err := validateClaude55Request(body, mappedModel); err != nil {
 		writeChatCompletionsError(c, http.StatusBadRequest, "invalid_request_error", err.Error())
 		return nil, err
@@ -105,6 +110,10 @@ func (s *GatewayService) ForwardAsChatCompletions(
 
 	if shouldMimicClaudeCode {
 		anthropicBody = s.applyClaudeCodeOAuthMimicryToBody(ctx, c, account, anthropicBody, anthropicReq.System, mappedModel)
+	}
+	if modelPlatform == PlatformAnthropic {
+		// OAuth mimicry may reintroduce a default temperature.
+		anthropicBody, _ = deleteJSONPathBytes(anthropicBody, "temperature")
 	}
 	if s.shouldInjectAnthropicCacheTTL1h(ctx, account) {
 		// Chat Completions clients need message breakpoints even without cache hints.
