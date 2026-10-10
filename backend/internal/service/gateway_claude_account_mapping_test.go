@@ -19,7 +19,7 @@ func TestClaudeAccountMappingForwarding(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	for _, accountType := range []string{AccountTypeOAuth, AccountTypeSetupToken, AccountTypeAPIKey} {
 		for _, client := range []string{"claude-code", "third-party"} {
-			for _, endpoint := range []string{"messages", "messages_stream", "count_tokens", "account_test"} {
+			for _, endpoint := range []string{"messages", "messages_stream", "chat_completions", "chat_completions_stream", "count_tokens", "account_test"} {
 				for _, tc := range []struct {
 					name, requested, pattern, target string
 				}{
@@ -29,19 +29,22 @@ func TestClaudeAccountMappingForwarding(t *testing.T) {
 					t.Run(strings.Join([]string{accountType, client, endpoint, tc.name}, "/"), func(t *testing.T) {
 						c, _ := gin.CreateTestContext(httptest.NewRecorder())
 						c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+						if strings.HasPrefix(endpoint, "chat_completions") {
+							c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+						}
 						ctx := context.Background()
 						if client == "claude-code" {
 							ctx = SetClaudeCodeClient(ctx, true)
 						}
 						c.Request = c.Request.WithContext(ctx)
-						body := []byte(fmt.Sprintf(`{"model":%q,"max_tokens":32,"stream":%t,"messages":[{"role":"user","content":"hello"}]}`, tc.requested, endpoint == "messages_stream"))
+						body := []byte(fmt.Sprintf(`{"model":%q,"max_tokens":32,"stream":%t,"messages":[{"role":"user","content":"hello"}]}`, tc.requested, strings.HasSuffix(endpoint, "_stream")))
 						parsed, err := ParseGatewayRequest(NewRequestBodyRef(body), PlatformAnthropic)
 						require.NoError(t, err)
 						response := `{"id":"msg_test","type":"message","role":"assistant","model":"` + tc.target + `","content":[{"type":"text","text":"hello"}],"stop_reason":"end_turn","usage":{"input_tokens":1,"output_tokens":1}}`
 						if endpoint == "count_tokens" {
 							response = `{"input_tokens":1}`
-						} else if endpoint == "messages_stream" {
-							response = "data: {\"type\":\"message_start\",\"message\":" + response + "}\n\ndata: {\"type\":\"message_stop\"}\n\n"
+						} else if endpoint == "messages_stream" || strings.HasPrefix(endpoint, "chat_completions") {
+							response = "event: message_start\ndata: {\"type\":\"message_start\",\"message\":" + response + "}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"
 						} else if endpoint == "account_test" {
 							response = "data: {\"type\":\"message_stop\"}\n\n"
 						}
@@ -63,6 +66,12 @@ func TestClaudeAccountMappingForwarding(t *testing.T) {
 						svc := &GatewayService{cfg: &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSize}}, httpUpstream: upstream, rateLimitService: &RateLimitService{}}
 						require.True(t, svc.isModelSupportedByAccount(account, tc.requested), "configured source must remain schedulable")
 						switch endpoint {
+						case "chat_completions", "chat_completions_stream":
+							result, err := svc.ForwardAsChatCompletions(ctx, c, account, body, parsed)
+							require.NoError(t, err)
+							require.Equal(t, "/v1/messages", upstream.lastReq.URL.Path)
+							require.Equal(t, tc.target, result.UpstreamModel)
+							require.Equal(t, tc.requested, result.Model)
 						case "messages", "messages_stream":
 							result, err := svc.Forward(ctx, c, account, parsed)
 							require.NoError(t, err)
