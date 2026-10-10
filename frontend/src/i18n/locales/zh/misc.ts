@@ -40,7 +40,7 @@ export default {
     restarting: '正在重启...',
     retry: '重试',
     rollback: '版本回退',
-    rollbackSelectVersion: '选择要回退到的版本（近 3 个版本）',
+    rollbackSelectVersion: '选择当前版本重装，或回退到最近 3 个旧版本',
     rollbackConfirm: '回退到 {version}',
     rollbackWarning: '回退将下载所选版本并替换当前程序，完成后需重启服务',
     rollingBack: '正在回退...',

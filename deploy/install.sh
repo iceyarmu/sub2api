@@ -120,7 +120,7 @@ declare -A MSG_ZH=(
     # Version install
     ["installing_version"]="正在安装指定版本"
     ["version_not_found"]="指定版本不存在"
-    ["same_version"]="已经是该版本，无需操作"
+    ["same_version"]="已是该版本，将重新下载并安装"
     ["rollback_complete"]="版本回退完成！"
     ["install_version_complete"]="指定版本安装完成！"
     ["validating_version"]="正在验证版本..."
@@ -245,7 +245,7 @@ declare -A MSG_EN=(
     # Version install
     ["installing_version"]="Installing specified version"
     ["version_not_found"]="Specified version not found"
-    ["same_version"]="Already at this version, no action needed"
+    ["same_version"]="Already at this version; downloading and reinstalling"
     ["rollback_complete"]="Version rollback completed!"
     ["install_version_complete"]="Specified version installed!"
     ["validating_version"]="Validating version..."
@@ -548,7 +548,7 @@ list_versions() {
     print_info "$(msg 'fetching_versions')"
 
     local versions
-    versions=$(github_api_curl -s --connect-timeout 10 --max-time 30 "https://api.github.com/repos/${GITHUB_REPO}/releases" 2>/dev/null | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/' | head -20)
+    versions=$(github_api_curl -s --connect-timeout 10 --max-time 30 "https://api.github.com/repos/${DOWNLOAD_GITHUB_REPO}/releases" 2>/dev/null | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/' | head -20)
 
     if [ -z "$versions" ]; then
         print_error "$(msg 'failed_get_version')"
@@ -585,7 +585,7 @@ validate_version() {
 
     # Check if the release exists
     local http_code
-    http_code=$(github_api_curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 30 "https://api.github.com/repos/${GITHUB_REPO}/releases/tags/${version}" 2>/dev/null)
+    http_code=$(github_api_curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 30 "https://api.github.com/repos/${DOWNLOAD_GITHUB_REPO}/releases/tags/${version}" 2>/dev/null)
 
     # Check for network errors (empty or non-numeric response)
     if [ -z "$http_code" ] || ! [[ "$http_code" =~ ^[0-9]+$ ]]; then
@@ -916,7 +916,6 @@ install_version() {
     # Check if same version
     if [ "$current_version" = "$target_version" ] || [ "$current_version" = "${target_version#v}" ]; then
         print_warning "$(msg 'same_version')"
-        exit 0
     fi
 
     # Stop service if running

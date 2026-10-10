@@ -40,7 +40,7 @@ export default {
     restarting: 'Restarting...',
     retry: 'Retry',
     rollback: 'Version Rollback',
-    rollbackSelectVersion: 'Select a version to roll back to (last 3 versions)',
+    rollbackSelectVersion: 'Reinstall the current version or select one of the last 3 older versions',
     rollbackConfirm: 'Roll back to {version}',
     rollbackWarning:
       'Rollback downloads the selected version and replaces the current binary. A service restart is required afterwards.',

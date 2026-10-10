@@ -304,9 +304,8 @@ func (s *UpdateService) Rollback() error {
 	return nil
 }
 
-// ListRollbackVersions returns up to maxRollbackVersions release versions that are
-// strictly older than the current version (the current version itself is excluded),
-// newest first. Draft and prerelease entries are skipped.
+// ListRollbackVersions returns the current release for reinstallation plus up to
+// maxRollbackVersions older releases, newest first. Drafts and prereleases are skipped.
 func (s *UpdateService) ListRollbackVersions(ctx context.Context) ([]RollbackVersion, error) {
 	releases, err := s.fetchRollbackCandidates(ctx)
 	if err != nil {
@@ -324,9 +323,9 @@ func (s *UpdateService) ListRollbackVersions(ctx context.Context) ([]RollbackVer
 	return versions, nil
 }
 
-// RollbackToVersion downloads and installs a specific older version.
+// RollbackToVersion downloads and installs the current or a specific older version.
 // The target must be one of the versions returned by ListRollbackVersions;
-// anything else (including the current version) is rejected.
+// anything else is rejected. Current-version installs download fresh release assets.
 func (s *UpdateService) RollbackToVersion(ctx context.Context, version string) error {
 	target := strings.TrimPrefix(strings.TrimSpace(version), "v")
 	if target == "" {
@@ -362,9 +361,9 @@ func (s *UpdateService) RollbackToVersion(ctx context.Context, version string) e
 }
 
 // fetchRollbackCandidates fetches recent releases and keeps the newest
-// maxRollbackVersions entries strictly older than the current version.
+// maxRollbackVersions older entries, plus the current version for reinstallation.
 func (s *UpdateService) fetchRollbackCandidates(ctx context.Context) ([]*GitHubRelease, error) {
-	releases, err := s.githubClient.FetchRecentReleases(ctx, githubRepo, rollbackFetchPageSize)
+	releases, err := s.githubClient.FetchRecentReleases(ctx, githubDownloadRepo, rollbackFetchPageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -379,8 +378,7 @@ func (s *UpdateService) fetchRollbackCandidates(ctx context.Context) ([]*GitHubR
 		if v == "" || seen[v] {
 			continue
 		}
-		// Only versions strictly older than current (also excludes current itself)
-		if compareVersions(v, s.currentVersion) >= 0 {
+		if compareVersions(v, s.currentVersion) > 0 {
 			continue
 		}
 		seen[v] = true
@@ -394,8 +392,12 @@ func (s *UpdateService) fetchRollbackCandidates(ctx context.Context) ([]*GitHubR
 		) > 0
 	})
 
-	if len(candidates) > maxRollbackVersions {
-		candidates = candidates[:maxRollbackVersions]
+	limit := maxRollbackVersions
+	if len(candidates) > 0 && compareVersions(strings.TrimPrefix(candidates[0].TagName, "v"), s.currentVersion) == 0 {
+		limit++
+	}
+	if len(candidates) > limit {
+		candidates = candidates[:limit]
 	}
 	return candidates, nil
 }
@@ -433,7 +435,7 @@ func (s *UpdateService) fetchLatestRelease(ctx context.Context) (*UpdateInfo, er
 	}, nil
 }
 
-// githubReleaseAssetDownloadURL keeps release discovery on githubRepo while
+// githubReleaseAssetDownloadURL keeps latest release discovery on githubRepo while
 // routing package downloads through the maintained fork. The API response is
 // still authoritative for the release tag and asset name; only the repository
 // owner used for the download is changed.

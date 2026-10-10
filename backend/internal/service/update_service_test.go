@@ -115,7 +115,6 @@ func newRollbackTestService(current string, releases []*GitHubRelease) *UpdateSe
 func TestUpdateServiceListRollbackVersionsFiltersAndCaps(t *testing.T) {
 	releases := []*GitHubRelease{
 		{TagName: "v0.1.148", PublishedAt: "2026-07-09T00:00:00Z"},                       // newer than current: excluded
-		{TagName: "v0.1.147", PublishedAt: "2026-07-08T00:00:00Z"},                       // current: excluded
 		{TagName: "v0.1.146-rc1", PublishedAt: "2026-07-07T12:00:00Z", Prerelease: true}, // prerelease: excluded
 		{TagName: "v0.1.146", PublishedAt: "2026-07-07T00:00:00Z"},
 		{TagName: "v0.1.145", PublishedAt: "2026-07-06T00:00:00Z", Draft: true}, // draft: excluded
@@ -154,7 +153,6 @@ func TestUpdateServiceListRollbackVersionsSortsUnorderedInput(t *testing.T) {
 
 func TestUpdateServiceListRollbackVersionsEmptyWhenNoneOlder(t *testing.T) {
 	releases := []*GitHubRelease{
-		{TagName: "v0.1.147"},
 		{TagName: "v0.1.148"},
 	}
 	svc := newRollbackTestService("0.1.147", releases)
@@ -192,12 +190,10 @@ func TestUpdateServiceRollbackToVersionRejectsDisallowedTargets(t *testing.T) {
 	svc := newRollbackTestService("0.1.147", releases)
 
 	for _, target := range []string{
-		"",         // empty
-		"0.1.147",  // current version
-		"v0.1.147", // current version with prefix
-		"0.1.148",  // newer than current
-		"0.1.142",  // older than the 3 most recent
-		"9.9.9",    // nonexistent
+		"",        // empty
+		"0.1.148", // newer than current
+		"0.1.142", // older than the 3 most recent
+		"9.9.9",   // nonexistent
 	} {
 		err := svc.RollbackToVersion(context.Background(), target)
 		require.ErrorIs(t, err, ErrRollbackVersionNotAllowed, "target %q should be rejected", target)
