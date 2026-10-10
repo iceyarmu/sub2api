@@ -3,16 +3,16 @@ name: Release
 on:
   push:
     branches:
-      - release
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to release (or a branch/ref for dry run)'
+        description: 'Tag or main branch to release (any ref for dry run)'
         required: true
         type: string
-        default: release
+        default: main
       simple_release:
         description: 'Simple release: only x86_64 GHCR image, skip other artifacts'
         required: false
@@ -232,9 +232,19 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache: false
-      - name: Create release tag at the verified source commit
+      - name: Create or update release tag at the verified source commit
         if: ${{ env.DRY_RUN != 'true' }}
+        env:
+          REQUESTED_REF: ${{ inputs.tag || github.ref_name }}
         run: |
+          if [[ "$REQUESTED_REF" == main || "$REQUESTED_REF" == refs/heads/main ]]; then
+            previous_tag=$(git rev-parse --verify "refs/tags/$RELEASE_TAG" 2>/dev/null || true)
+            if [[ "$(git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}" 2>/dev/null || true)" != "$RELEASE_SHA" ]]; then
+              git tag --force "$RELEASE_TAG" "$RELEASE_SHA"
+            fi
+            git push --force-with-lease="refs/tags/$RELEASE_TAG:$previous_tag" origin "refs/tags/$RELEASE_TAG"
+            exit 0
+          fi
           if git rev-parse --verify "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
             test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
           else

@@ -80,6 +80,8 @@ class ReleaseMatrixTest(unittest.TestCase):
                 self.assertFalse(data['dockers'])
                 self.assertEqual(data['release']['header'], original['release']['header'])
                 self.assertEqual(data['release']['footer'], original['release']['footer'])
+                self.assertTrue(data['release']['replace_existing_artifacts'])
+                self.assertEqual(data['release']['mode'], 'replace')
                 if simple:
                     self.assertTrue(data['checksum']['disable'])
                     self.assertTrue(data['release']['skip_upload'])
@@ -122,7 +124,7 @@ class ReleaseMatrixTest(unittest.TestCase):
             self.assertEqual(binary.stat().st_mode & 0o777, 0o755)
 
     def test_plan_requires_a_tag_for_publication(self):
-        args = argparse.Namespace(ref='main', dry_run=False, simple=False)
+        args = argparse.Namespace(ref='release', dry_run=False, simple=False)
         with patch.object(subprocess, 'check_output', return_value='a' * 40 + '\n'):
             with self.assertRaisesRegex(ValueError, 'version tag'):
                 release.plan(args)
@@ -138,6 +140,56 @@ class ReleaseMatrixTest(unittest.TestCase):
         self.assertEqual(output['dry_run'], 'true')
         self.assertEqual(output['owner_lower'], 'exampleowner')
         self.assertEqual(len(json.loads(output['matrix'])['include']), 5)
+
+    def test_main_branch_uses_current_version_even_when_tag_exists(self):
+        release.VERSION_FILE.write_text('0.2.15\n')
+        subprocess.run(['git', 'init', '-q'], check=True)
+        commit = ['git', '-c', 'user.name=Release Test', '-c', 'user.email=release@example.com',
+                  '-c', 'commit.gpgsign=false', 'commit', '--allow-empty', '-qm']
+        subprocess.run(commit + ['old release'], check=True)
+        subprocess.run(['git', 'tag', 'v0.2.15'], check=True)
+        subprocess.run(commit + ['current release'], check=True)
+        sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+
+        for ref in ('main', 'refs/heads/main'):
+            for simple in (False, True):
+                with self.subTest(ref=ref, simple=simple), patch.dict(os.environ, {'GITHUB_OUTPUT': 'outputs'}):
+                    release.plan(argparse.Namespace(ref=ref, dry_run=False, simple=simple))
+                    output = dict(line.split('=', 1) for line in Path('outputs').read_text().splitlines())
+                    self.assertEqual(output['version'], '0.2.15')
+                    self.assertEqual(output['tag'], 'v0.2.15')
+                    self.assertEqual(output['sha'], sha)
+                    self.assertEqual(release.VERSION_FILE.read_text(), '0.2.15\n')
+        self.assertEqual(subprocess.check_output(['git', 'tag', '--list'], text=True).strip(), 'v0.2.15')
+
+    def test_release_tag_step_creates_replaces_and_retries_same_version(self):
+        workflow = yaml.safe_load((ROOT / '.github/workflows/release.yml').read_text())
+        step = next(step for step in workflow['jobs']['release']['steps']
+                    if step.get('name') == 'Create or update release tag at the verified source commit')
+        subprocess.run(['git', 'init', '-q'], check=True)
+        subprocess.run(['git', 'init', '--bare', '-q', 'remote.git'], check=True)
+        subprocess.run(['git', 'remote', 'add', 'origin', str(Path('remote.git').resolve())], check=True)
+        commit = ['git', '-c', 'user.name=Release Test', '-c', 'user.email=release@example.com',
+                  '-c', 'commit.gpgsign=false', 'commit', '--allow-empty', '-qm']
+        for ref in ('main', 'refs/heads/main'):
+            subprocess.run(commit + [ref], check=True)
+            sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+            env = {**os.environ, 'REQUESTED_REF': ref, 'RELEASE_TAG': 'v0.2.15', 'RELEASE_SHA': sha}
+            for _ in range(2):
+                subprocess.run(['bash', '-euo', 'pipefail', '-c', step['run']], env=env, check=True,
+                               capture_output=True, text=True)
+                remote = subprocess.check_output(['git', 'ls-remote', '--tags', 'origin'], text=True)
+                self.assertEqual(remote.strip(), f'{sha}\trefs/tags/v0.2.15')
+
+        # Tag-triggered releases must still refuse to move an existing tag.
+        subprocess.run(commit + ['different tag source'], check=True)
+        env['REQUESTED_REF'] = 'v0.2.15'
+        env['RELEASE_SHA'] = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+        result = subprocess.run(['bash', '-euo', 'pipefail', '-c', step['run']], env=env,
+                                capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(subprocess.check_output(['git', 'ls-remote', '--tags', 'origin'], text=True).strip(),
+                         f'{sha}\trefs/tags/v0.2.15')
 
     def test_docker_commands_do_not_publish_during_dry_run(self):
         fake_bin = Path('bin')

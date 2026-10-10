@@ -55,21 +55,11 @@ def plan(args):
     if args.dry_run:
         version = VERSION_FILE.read_text().strip()
         tag = 'v' + version
-    elif args.ref in ('release', 'refs/heads/release'):
+    elif args.ref in ('main', 'refs/heads/main'):
         version = VERSION_FILE.read_text().strip()
         if not re.fullmatch(r'\d+\.\d+\.\d+', version):
-            raise ValueError('release branch requires a stable MAJOR.MINOR.PATCH VERSION')
-        major, minor, patch = map(int, version.split('.'))
-        while True:
-            version = f'{major}.{minor}.{patch}'
-            tag = 'v' + version
-            existing = subprocess.run(
-                ['git', 'rev-parse', '--verify', '--quiet', f'refs/tags/{tag}^{{commit}}'],
-                text=True, capture_output=True)
-            if existing.returncode == 1 or (existing.returncode == 0 and existing.stdout.strip() == sha):
-                break
-            existing.check_returncode()
-            patch += 1
+            raise ValueError('main branch requires a stable MAJOR.MINOR.PATCH VERSION')
+        tag = 'v' + version
     else:
         tag = args.ref
         version = tag.removeprefix('v')
@@ -110,6 +100,8 @@ def generate_config(args):
         data['before'] = {'hooks': []}
         data['builds'] = [{'id': 'sub2api', 'skip': True}]
         data['archives'] = []
+        data['release']['replace_existing_artifacts'] = True
+        data['release']['mode'] = 'replace'
         extra = [{'glob': 'release-input/sub2api_*.tar.gz'}, {'glob': 'release-input/sub2api_*.zip'}]
         if args.simple:
             data['checksum'] = {'disable': True}
