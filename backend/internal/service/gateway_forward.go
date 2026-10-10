@@ -323,7 +323,8 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 	}
 
 	if s.shouldInjectAnthropicCacheTTL1h(ctx, account) {
-		if err := replaceBody(injectAnthropicCacheControlTTL1h(body)); err != nil {
+		cacheBody := injectAnthropicCacheControlTTL1h(addMessageCacheBreakpoints(body))
+		if err := replaceBody(enforceCacheControlLimit(cacheBody)); err != nil {
 			return nil, err
 		}
 	}
