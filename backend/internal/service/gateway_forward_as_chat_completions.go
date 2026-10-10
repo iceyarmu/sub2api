@@ -106,6 +106,9 @@ func (s *GatewayService) ForwardAsChatCompletions(
 	if shouldMimicClaudeCode {
 		anthropicBody = s.applyClaudeCodeOAuthMimicryToBody(ctx, c, account, anthropicBody, anthropicReq.System, mappedModel)
 	}
+	if s.shouldInjectAnthropicCacheTTL1h(ctx, account) {
+		anthropicBody = injectAnthropicCacheControlTTL1h(anthropicBody)
+	}
 
 	// 7. Enforce cache_control block limit
 	anthropicBody = enforceCacheControlLimit(anthropicBody)

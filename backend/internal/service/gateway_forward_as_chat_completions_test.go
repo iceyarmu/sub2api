@@ -3,7 +3,9 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -11,9 +13,61 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 )
+
+func TestForwardAsChatCompletions_GlobalCacheTTL1hInjection(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, accountType := range []string{AccountTypeOAuth, AccountTypeSetupToken, AccountTypeAPIKey} {
+		for _, enabled := range []bool{false, true} {
+			for _, stream := range []bool{false, true} {
+				t.Run(fmt.Sprintf("%s/enabled=%t/stream=%t", accountType, enabled, stream), func(t *testing.T) {
+					resetGatewayForwardingSettingsCacheForTest(t)
+					cfg := &config.Config{}
+					upstream := &anthropicHTTPUpstreamRecorder{resp: &http.Response{
+						StatusCode: http.StatusOK,
+						Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+						Body:       io.NopCloser(strings.NewReader(namespaceToolAnthropicStream())),
+					}}
+					svc := &GatewayService{cfg: cfg, httpUpstream: upstream,
+						settingService: NewSettingService(&gatewayTTLSettingRepo{data: map[string]string{
+							SettingKeyEnableAnthropicCacheTTL1hInjection: fmt.Sprint(enabled),
+						}}, cfg),
+					}
+					account := &Account{ID: 1, Platform: PlatformAnthropic, Type: accountType,
+						Credentials: map[string]any{"access_token": "test-token", "api_key": "test-key"},
+					}
+					body := []byte(fmt.Sprintf(`{"model":"claude-haiku-4-5-20251001","stream":%t,"max_tokens":32,
+						"messages":[{"role":"system","content":"Be brief."},{"role":"user","content":"Hello"}],
+						"tools":[{"type":"function","function":{"name":"probe","parameters":{"type":"object"}}}]}`, stream))
+					c, _ := gin.CreateTestContext(httptest.NewRecorder())
+					c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader(string(body)))
+					_, err := svc.ForwardAsChatCompletions(context.Background(), c, account, body, nil)
+					require.NoError(t, err)
+					require.Equal(t, "/v1/messages", upstream.lastReq.URL.Path)
+					_, messages, tools, system := collectCacheControlPaths(upstream.lastBody)
+					paths := append(append(tools, system...), messages...)
+					if accountType == AccountTypeAPIKey {
+						require.Empty(t, paths, "OAuth TTL injection must not add API-key cache breakpoints")
+						return
+					}
+					require.NotEmpty(t, tools, "OAuth mimicry must provide a tool cache breakpoint")
+					require.NotEmpty(t, system, "OAuth mimicry must provide a system cache breakpoint")
+					wantTTL := "5m"
+					if enabled {
+						wantTTL = "1h"
+					}
+					for _, path := range paths {
+						require.Equal(t, wantTTL, gjson.GetBytes(upstream.lastBody, path+".ttl").String(), path)
+					}
+				})
+			}
+		}
+	}
+}
 
 func TestHandleCCBufferedFromAnthropic_ToolArgumentsAreValidJSON(t *testing.T) {
 	t.Parallel()
