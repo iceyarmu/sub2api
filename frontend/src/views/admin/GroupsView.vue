@@ -1615,6 +1615,8 @@
           </p>
         </div>
 
+        </template>
+
         <!-- OpenAI Messages 调度配置（OpenAI 与 Composite 平台） -->
         <div
           v-if="supportsMessagesDispatchPlatform(createForm.platform)"
@@ -1827,6 +1829,7 @@
           </div>
         </div>
 
+        <template v-if="!authStore.isSimpleMode">
         <!-- 账号过滤控制 (OpenAI/Antigravity/Anthropic/Gemini) -->
         <div
           v-if="
@@ -3265,6 +3268,8 @@
           </p>
         </div>
 
+        </template>
+
         <!-- OpenAI Messages 调度配置（OpenAI 与 Composite 平台） -->
         <div
           v-if="supportsMessagesDispatchPlatform(editForm.platform)"
@@ -3476,6 +3481,7 @@
           </div>
         </div>
 
+        <template v-if="!authStore.isSimpleMode">
         <!-- 账号过滤控制 (OpenAI/Antigravity/Anthropic/Gemini) -->
         <div
           v-if="
@@ -6030,6 +6036,12 @@ const handleCreateGroup = async () => {
           description: createForm.description,
           i18n: createForm.i18n,
           platform: createForm.platform,
+          ...(createForm.platform === "openai"
+            ? {
+                allow_messages_dispatch: createForm.allow_messages_dispatch,
+                messages_dispatch_model_config: requestData.messages_dispatch_model_config,
+              }
+            : {}),
         }
       : requestData;
     await adminAPI.groups.create(payload);
@@ -6387,6 +6399,12 @@ const handleUpdateGroup = async () => {
           name: editForm.name,
           description: editForm.description,
           i18n: editForm.i18n,
+          ...(editForm.platform === "openai"
+            ? {
+                allow_messages_dispatch: editForm.allow_messages_dispatch,
+                messages_dispatch_model_config: payload.messages_dispatch_model_config,
+              }
+            : {}),
         }
       : payload;
     await adminAPI.groups.update(editingGroup.value.id, requestData);

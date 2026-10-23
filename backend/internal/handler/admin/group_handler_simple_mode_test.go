@@ -175,6 +175,7 @@ func TestGroupHandlerSimpleModeResponseUsesFieldAllowlist(t *testing.T) {
 	require.ElementsMatch(t, []string{
 		"id", "name", "description", "platform", "status", "account_count",
 		"active_account_count", "rate_limited_account_count", "sort_order", "created_at", "updated_at",
+		"allow_messages_dispatch", "messages_dispatch_model_config",
 	}, mapKeys(item))
 	for _, forbidden := range []string{
 		"rate_multiplier", "rpm_limit", "long_context_pricing_enabled", "model_pricing",
@@ -184,6 +185,71 @@ func TestGroupHandlerSimpleModeResponseUsesFieldAllowlist(t *testing.T) {
 		_, exposed := item[forbidden]
 		require.Falsef(t, exposed, "simple mode exposed %s", forbidden)
 	}
+}
+
+func TestGroupHandlerSimpleModeMessagesDispatchSettings(t *testing.T) {
+	svc := newStubAdminService()
+	mapping := service.OpenAIMessagesDispatchModelConfig{
+		SonnetMappedModel:  "gpt-5.4",
+		ExactModelMappings: map[string]string{"claude-custom": "gpt-5.4-mini"},
+	}
+	svc.groups = []service.Group{{
+		ID: 1, Name: "OpenAI", Platform: service.PlatformOpenAI,
+		AllowMessagesDispatch: true, MessagesDispatchModelConfig: mapping,
+	}}
+	r := newSimpleModeGroupRouter(svc)
+
+	for _, path := range []string{"/groups", "/groups/all"} {
+		res := httptest.NewRecorder()
+		r.ServeHTTP(res, httptest.NewRequest(http.MethodGet, path, nil))
+		require.Equal(t, http.StatusOK, res.Code)
+		var payload struct{ Data json.RawMessage }
+		require.NoError(t, json.Unmarshal(res.Body.Bytes(), &payload))
+		var groups []simpleModeGroupResponse
+		if path == "/groups" {
+			var page struct{ Items []simpleModeGroupResponse }
+			require.NoError(t, json.Unmarshal(payload.Data, &page))
+			groups = page.Items
+		} else {
+			require.NoError(t, json.Unmarshal(payload.Data, &groups))
+		}
+		require.Len(t, groups, 1)
+		require.True(t, groups[0].AllowMessagesDispatch)
+		require.Equal(t, mapping, groups[0].MessagesDispatchModelConfig)
+	}
+
+	for _, tt := range []struct {
+		method string
+		path   string
+		body   string
+	}{
+		{http.MethodPost, "/groups", `{"name":"OpenAI","platform":"openai","allow_messages_dispatch":true,"messages_dispatch_model_config":{"sonnet_mapped_model":"gpt-5.4","exact_model_mappings":{"claude-custom":"gpt-5.4-mini"}}}`},
+		{http.MethodPut, "/groups/1", `{"allow_messages_dispatch":true,"messages_dispatch_model_config":{"sonnet_mapped_model":"gpt-5.4","exact_model_mappings":{"claude-custom":"gpt-5.4-mini"}}}`},
+		{http.MethodPut, "/groups/1", `{"allow_messages_dispatch":false}`},
+		{http.MethodPut, "/groups/1", `{"messages_dispatch_model_config":{}}`},
+		{http.MethodPut, "/groups/1", `{"name":"renamed"}`},
+	} {
+		req := httptest.NewRequest(tt.method, tt.path, bytes.NewBufferString(tt.body))
+		req.Header.Set("Content-Type", "application/json")
+		res := httptest.NewRecorder()
+		r.ServeHTTP(res, req)
+		require.Equal(t, http.StatusOK, res.Code, res.Body.String())
+	}
+
+	require.Len(t, svc.createdGroups, 1)
+	require.True(t, svc.createdGroups[0].AllowMessagesDispatch)
+	require.Equal(t, mapping, svc.createdGroups[0].MessagesDispatchModelConfig)
+	require.Len(t, svc.updatedGroups, 4)
+	require.NotNil(t, svc.updatedGroups[0].AllowMessagesDispatch)
+	require.True(t, *svc.updatedGroups[0].AllowMessagesDispatch)
+	require.Equal(t, &mapping, svc.updatedGroups[0].MessagesDispatchModelConfig)
+	require.NotNil(t, svc.updatedGroups[1].AllowMessagesDispatch)
+	require.False(t, *svc.updatedGroups[1].AllowMessagesDispatch)
+	require.Nil(t, svc.updatedGroups[1].MessagesDispatchModelConfig)
+	require.Nil(t, svc.updatedGroups[2].AllowMessagesDispatch)
+	require.Equal(t, &service.OpenAIMessagesDispatchModelConfig{}, svc.updatedGroups[2].MessagesDispatchModelConfig)
+	require.Nil(t, svc.updatedGroups[3].AllowMessagesDispatch)
+	require.Nil(t, svc.updatedGroups[3].MessagesDispatchModelConfig)
 }
 
 func TestGroupHandlerSimpleModeListsOnlyBindableGroups(t *testing.T) {

@@ -144,6 +144,9 @@ type simpleModeGroupResponse struct {
 
 	I18n service.GroupI18n `json:"i18n,omitempty"`
 
+	AllowMessagesDispatch       bool                                      `json:"allow_messages_dispatch"`
+	MessagesDispatchModelConfig service.OpenAIMessagesDispatchModelConfig `json:"messages_dispatch_model_config"`
+
 	AccountCount            int64     `json:"account_count,omitempty"`
 	ActiveAccountCount      int64     `json:"active_account_count,omitempty"`
 	RateLimitedAccountCount int64     `json:"rate_limited_account_count,omitempty"`
@@ -163,6 +166,9 @@ func groupForSimpleMode(group *service.Group) *simpleModeGroupResponse {
 		AccountCount:       group.AccountCount,
 		ActiveAccountCount: group.ActiveAccountCount, RateLimitedAccountCount: group.RateLimitedAccountCount,
 		SortOrder: group.SortOrder, CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
+
+		AllowMessagesDispatch:       group.AllowMessagesDispatch,
+		MessagesDispatchModelConfig: group.MessagesDispatchModelConfig,
 	}
 }
 
@@ -170,7 +176,11 @@ func sanitizeCreateGroupRequestForSimpleMode(req *CreateGroupRequest) {
 	if req == nil {
 		return
 	}
-	allowed := CreateGroupRequest{Name: req.Name, Description: req.Description, I18n: req.I18n, Platform: req.Platform}
+	allowed := CreateGroupRequest{
+		Name: req.Name, Description: req.Description, I18n: req.I18n, Platform: req.Platform,
+		AllowMessagesDispatch:       req.AllowMessagesDispatch,
+		MessagesDispatchModelConfig: req.MessagesDispatchModelConfig,
+	}
 	allowed.RateMultiplier = 1
 	allowed.SubscriptionType = service.SubscriptionTypeStandard
 	*req = allowed
@@ -180,7 +190,11 @@ func sanitizeUpdateGroupRequestForSimpleMode(req *UpdateGroupRequest) {
 	if req == nil {
 		return
 	}
-	*req = UpdateGroupRequest{Name: req.Name, Description: req.Description, I18n: req.I18n}
+	*req = UpdateGroupRequest{
+		Name: req.Name, Description: req.Description, I18n: req.I18n,
+		AllowMessagesDispatch:       req.AllowMessagesDispatch,
+		MessagesDispatchModelConfig: req.MessagesDispatchModelConfig,
+	}
 }
 
 // CreateGroupRequest represents create group request

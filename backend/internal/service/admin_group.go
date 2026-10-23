@@ -374,6 +374,8 @@ func normalizeCreateGroupInputForSimpleMode(input *CreateGroupInput) {
 	*input = CreateGroupInput{
 		Name: input.Name, Description: input.Description, I18n: input.I18n, Platform: input.Platform,
 		RateMultiplier: 1, SubscriptionType: SubscriptionTypeStandard,
+		AllowMessagesDispatch:       input.AllowMessagesDispatch,
+		MessagesDispatchModelConfig: input.MessagesDispatchModelConfig,
 	}
 }
 
@@ -381,7 +383,11 @@ func normalizeUpdateGroupInputForSimpleMode(input *UpdateGroupInput) {
 	if input == nil {
 		return
 	}
-	*input = UpdateGroupInput{Name: input.Name, Description: input.Description, I18n: input.I18n}
+	*input = UpdateGroupInput{
+		Name: input.Name, Description: input.Description, I18n: input.I18n,
+		AllowMessagesDispatch:       input.AllowMessagesDispatch,
+		MessagesDispatchModelConfig: input.MessagesDispatchModelConfig,
+	}
 }
 
 func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupInput) (*Group, error) {

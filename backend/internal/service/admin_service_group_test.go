@@ -237,6 +237,7 @@ func TestAdminServiceSimpleModeNormalizesAllUnsupportedCreateFieldsDirectly(t *t
 	require.Equal(t, CreateGroupInput{
 		Name: "simple", Description: "allowed", Platform: PlatformAnthropic,
 		RateMultiplier: 1, SubscriptionType: SubscriptionTypeStandard,
+		AllowMessagesDispatch: true,
 	}, *input)
 	require.Equal(t, 1.0, created.RateMultiplier)
 	require.Equal(t, SubscriptionTypeStandard, created.SubscriptionType)
@@ -272,7 +273,7 @@ func TestAdminServiceSimpleModeNormalizesAllUnsupportedUpdateFieldsDirectly(t *t
 
 	updated, err := svc.UpdateGroup(context.Background(), 1, input)
 	require.NoError(t, err)
-	require.Equal(t, UpdateGroupInput{Name: "renamed", Description: &description}, *input)
+	require.Equal(t, UpdateGroupInput{Name: "renamed", Description: &description, AllowMessagesDispatch: &truth}, *input)
 	require.Equal(t, "renamed", updated.Name)
 	require.Equal(t, description, updated.Description)
 	require.Equal(t, PlatformAnthropic, updated.Platform)
@@ -280,6 +281,54 @@ func TestAdminServiceSimpleModeNormalizesAllUnsupportedUpdateFieldsDirectly(t *t
 	require.Equal(t, 3.0, updated.RateMultiplier)
 	require.Equal(t, 8, updated.RPMLimit)
 	require.Equal(t, &fallbackID, updated.FallbackGroupID)
+}
+
+func TestAdminServiceSimpleModeMessagesDispatchLifecycle(t *testing.T) {
+	repo := &groupRepoStubForAdmin{createID: 1}
+	svc := &adminServiceImpl{cfg: &config.Config{RunMode: config.RunModeSimple}, groupRepo: repo}
+	mapping := OpenAIMessagesDispatchModelConfig{
+		SonnetMappedModel:  "gpt-5.4",
+		ExactModelMappings: map[string]string{"claude-custom": "gpt-5.4-mini"},
+	}
+	created, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
+		Name: "OpenAI", Platform: PlatformOpenAI,
+		AllowMessagesDispatch: true, MessagesDispatchModelConfig: mapping,
+	})
+	require.NoError(t, err)
+	require.True(t, repo.created.AllowMessagesDispatch)
+	require.Equal(t, mapping, repo.created.MessagesDispatchModelConfig)
+	require.Equal(t, "gpt-5.4", created.ResolveMessagesDispatchModel("claude-sonnet-4-5"))
+	require.Equal(t, "gpt-5.4-mini", created.ResolveMessagesDispatchModel("claude-custom"))
+	repo.getByID = created
+
+	// A name-only update must preserve the dispatch settings.
+	updated, err := svc.UpdateGroup(context.Background(), 1, &UpdateGroupInput{Name: "renamed"})
+	require.NoError(t, err)
+	require.True(t, updated.AllowMessagesDispatch)
+	require.Equal(t, mapping, updated.MessagesDispatchModelConfig)
+
+	disabled := false
+	updated, err = svc.UpdateGroup(context.Background(), 1, &UpdateGroupInput{AllowMessagesDispatch: &disabled})
+	require.NoError(t, err)
+	require.False(t, repo.updated.AllowMessagesDispatch)
+	require.Equal(t, mapping, updated.MessagesDispatchModelConfig)
+
+	enabled := true
+	mapping.SonnetMappedModel = "gpt-5.3-codex"
+	updated, err = svc.UpdateGroup(context.Background(), 1, &UpdateGroupInput{
+		AllowMessagesDispatch: &enabled, MessagesDispatchModelConfig: &mapping,
+	})
+	require.NoError(t, err)
+	require.True(t, repo.updated.AllowMessagesDispatch)
+	require.Equal(t, "gpt-5.3-codex", updated.ResolveMessagesDispatchModel("claude-sonnet-4-5"))
+	require.Equal(t, "gpt-5.4-mini", updated.ResolveMessagesDispatchModel("claude-custom"))
+
+	updated, err = svc.UpdateGroup(context.Background(), 1, &UpdateGroupInput{
+		MessagesDispatchModelConfig: &OpenAIMessagesDispatchModelConfig{},
+	})
+	require.NoError(t, err)
+	require.True(t, updated.AllowMessagesDispatch)
+	require.Empty(t, repo.updated.MessagesDispatchModelConfig)
 }
 
 func TestAdminServiceSimpleModeListUsesRepositoryFilteredTotal(t *testing.T) {
