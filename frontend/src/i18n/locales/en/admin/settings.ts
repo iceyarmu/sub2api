@@ -1150,6 +1150,17 @@ export default {
         presetOpusOnlyDesc: 'Pass for Opus, filter others',
         commonPatterns: 'Common patterns'
       },
+      claudeMaxPolicy: {
+        title: 'Claude Max Effort Policy',
+        description: 'Pass through, block, or downgrade Max effort on Claude requests. Applies to Messages and Responses/Chat Completions converted to Claude, including mid-conversation effort changes. Other effort levels are unaffected. Passes through by default.',
+        actionDowngrade: 'Downgrade (replace Max effort)',
+        downgradeEffort: 'Downgrade target effort',
+        downgradeHint: 'Only Max is replaced; other effort levels stay unchanged. Choose an effort level supported by the target model.',
+        loadFailed: 'Failed to load the Claude Max policy. Retry before editing.',
+        retry: 'Reload',
+        saved: 'Claude Max policy saved',
+        saveFailed: 'Failed to save Claude Max policy',
+      },
       openaiFastPolicy: {
         title: 'OpenAI Fast/Flex Policy',
         description: 'Intercept, filter, or pass OpenAI fast(priority), ultrafast, or flex requests based on the request body service_tier field. Applies to the OpenAI gateway only. "All tier values" includes explicitly sent tiers only.',

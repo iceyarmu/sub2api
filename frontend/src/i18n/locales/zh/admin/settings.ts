@@ -1144,6 +1144,17 @@ export default {
         presetOpusOnlyDesc: 'Opus 透传，其他模型过滤',
         commonPatterns: '常用模式'
       },
+      claudeMaxPolicy: {
+        title: 'Claude Max 档位策略',
+        description: '对 Claude 请求的 Max 推理档位进行透传、拦截或降级。支持 Messages 接口及转换为 Claude 请求的 Responses、Chat Completions 接口，包括会话中途的档位切换；非 Max 档位不受影响。默认透传。',
+        actionDowngrade: '降级（替换 Max 档位）',
+        downgradeEffort: '降级目标档位',
+        downgradeHint: '只替换 Max，其他档位保持不变。请选择目标模型支持的档位。',
+        loadFailed: '加载 Claude Max 策略失败，请重试后再修改。',
+        retry: '重新加载',
+        saved: 'Claude Max 策略保存成功',
+        saveFailed: '保存 Claude Max 策略失败',
+      },
       openaiFastPolicy: {
         title: 'OpenAI Fast/Flex 策略',
         description: '基于请求体 service_tier 字段拦截/过滤/透传 OpenAI fast(priority)、ultrafast 与 flex 请求；仅作用于 OpenAI 网关。“全部 tier 值”仅包含显式传入的 tier。',

@@ -342,6 +342,9 @@ func (h *GatewayHandler) Responses(c *gin.Context) {
 		}
 
 		if err != nil {
+			if h.handleClaudeMaxPolicyError(c, err, streamStarted, h.responsesErrorResponse) {
+				return
+			}
 			var failoverErr *service.UpstreamFailoverError
 			if errors.As(err, &failoverErr) {
 				// Can't failover if streaming content already sent

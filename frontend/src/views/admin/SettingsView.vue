@@ -1069,6 +1069,8 @@
               </template>
             </div>
           </div>
+          <ClaudeMaxPolicySettings />
+
           <!-- OpenAI Fast/Flex Policy Settings -->
           <div class="card">
             <div
@@ -9052,6 +9054,7 @@ import {
   type RechargeBonusTierDraft,
 } from "@/utils/rechargeBonus";
 import OpenAIFastPolicyUserSelector from "@/views/admin/settings/OpenAIFastPolicyUserSelector.vue";
+import ClaudeMaxPolicySettings from "@/views/admin/settings/ClaudeMaxPolicySettings.vue";
 import { useClipboard } from "@/composables/useClipboard";
 import {
   useStepUp,

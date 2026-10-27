@@ -994,6 +994,10 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 			}
 
 			if err != nil {
+				if h.handleClaudeMaxPolicyError(c, err, streamStarted, h.errorResponse) {
+					return
+				}
+
 				// Beta policy block: return 400 immediately, no failover
 				var betaBlockedErr *service.BetaBlockedError
 				if errors.As(err, &betaBlockedErr) {

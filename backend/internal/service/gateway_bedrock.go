@@ -65,7 +65,10 @@ func (s *GatewayService) forwardBedrock(
 ) (*ForwardResult, error) {
 	reqModel := parsed.Model
 	reqStream := parsed.Stream
-	body := parsed.Body.Bytes()
+	body, err := s.applyClaudeMaxPolicyToBody(ctx, account, parsed.Body.Bytes())
+	if err != nil {
+		return nil, err
+	}
 
 	region := bedrockRuntimeRegion(account)
 	mappedModel, ok := ResolveBedrockModelID(account, reqModel)
@@ -138,6 +141,9 @@ func (s *GatewayService) forwardBedrock(
 	// Bedrock 分支绕过通用 Forward 成功路径，这里保持上游接受回调语义一致。
 	if parsed.OnUpstreamAccepted != nil {
 		parsed.OnUpstreamAccepted()
+	}
+	if err := syncClaudeMaxPolicyBedrockBody(parsed, body, bedrockBody); err != nil {
+		return nil, err
 	}
 
 	// 响应处理

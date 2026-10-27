@@ -299,6 +299,10 @@ func (s *GatewayService) buildUpstreamRequestAnthropicAPIKeyPassthrough(
 	body []byte,
 	token string,
 ) (*http.Request, []byte, error) {
+	body, err := s.applyClaudeMaxPolicyToBody(ctx, account, body)
+	if err != nil {
+		return nil, nil, err
+	}
 	body = stripDeferredToolCacheControl(body)
 	targetURL := claudeAPIURL
 	baseURL := getAnthropicGatewayBaseURL(account)
