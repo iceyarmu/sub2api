@@ -73,6 +73,10 @@ func (s *OpenAIGatewayService) forwardAsChatCompletions(
 	defaultMappedModel string,
 	compatPromptCacheTenantIsolated bool,
 ) (*OpenAIForwardResult, error) {
+	body, maxPolicyErr := s.applyOpenAIMaxPolicyForHTTP(ctx, c, account, body)
+	if maxPolicyErr != nil {
+		return nil, maxPolicyErr
+	}
 	rememberOpenCodeInboundBody(c, body)
 	beginUpstreamResponseModelObservation(c)
 	ClearActualOpenAIUpstreamEndpoint(c)

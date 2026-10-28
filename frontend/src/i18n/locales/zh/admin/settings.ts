@@ -1155,6 +1155,17 @@ export default {
         saved: 'Claude Max 策略保存成功',
         saveFailed: '保存 Claude Max 策略失败',
       },
+      openaiMaxPolicy: {
+        title: 'OpenAI Max 档位策略',
+        description: '对 OpenAI 账号明确请求的 Max 推理档位进行透传、拦截或降级。支持 Responses、Chat Completions、Messages 兼容接口及 WebSocket 多轮请求。其他档位不受影响，默认透传。',
+        actionDowngrade: '降级（替换 Max 档位）',
+        downgradeEffort: '降级目标档位',
+        downgradeHint: '只替换 Max，其他档位保持不变。请选择目标模型支持的档位。',
+        loadFailed: '加载 OpenAI Max 策略失败，请重试后再修改。',
+        retry: '重新加载',
+        saved: 'OpenAI Max 策略保存成功',
+        saveFailed: '保存 OpenAI Max 策略失败',
+      },
       openaiFastPolicy: {
         title: 'OpenAI Fast/Flex 策略',
         description: '基于请求体 service_tier 字段拦截/过滤/透传 OpenAI fast(priority)、ultrafast 与 flex 请求；仅作用于 OpenAI 网关。“全部 tier 值”仅包含显式传入的 tier。',

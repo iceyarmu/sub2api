@@ -33,6 +33,10 @@ func (s *OpenAIGatewayService) ForwardAsAnthropic(
 	promptCacheKey string,
 	defaultMappedModel string,
 ) (*OpenAIForwardResult, error) {
+	body, maxPolicyErr := s.applyOpenAIMaxPolicyForHTTP(ctx, c, account, body)
+	if maxPolicyErr != nil {
+		return nil, maxPolicyErr
+	}
 	// 工具 Schema 清洗必须先于所有分流：下游每条路径（原生 Anthropic 直通、
 	// Chat Completions 转换、Responses 转换）都会把 tools 原样带给上游，而
 	// xAI / Moonshot 等严格校验方会因 input_schema 里的 required:null 或
@@ -308,7 +312,10 @@ func (s *OpenAIGatewayService) ForwardAsAnthropic(
 			return nil, policyErr
 		}
 		if changed {
-			responsesBody = policyBody
+			responsesBody, policyErr = s.applyOpenAIMaxPolicyForHTTP(ctx, c, account, policyBody)
+			if policyErr != nil {
+				return nil, policyErr
+			}
 			if responsesReq.Reasoning != nil {
 				responsesReq.Reasoning.Effort = gjson.GetBytes(responsesBody, "reasoning.effort").String()
 			}

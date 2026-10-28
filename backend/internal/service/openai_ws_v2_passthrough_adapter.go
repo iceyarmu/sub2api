@@ -701,6 +701,11 @@ func (s *OpenAIGatewayService) proxyResponsesWebSocketV2Passthrough(
 	} else {
 		firstClientMessage = next
 	}
+	if next, err := s.applyOpenAIMaxPolicyForWS(ctx, c, clientConn, account, firstClientMessage); err != nil {
+		return err
+	} else {
+		firstClientMessage = next
+	}
 	requestModel := strings.TrimSpace(gjson.GetBytes(firstClientMessage, "model").String())
 	requestPreviousResponseID := strings.TrimSpace(gjson.GetBytes(firstClientMessage, "previous_response_id").String())
 	promptCacheKey := strings.TrimSpace(gjson.GetBytes(firstClientMessage, "prompt_cache_key").String())
@@ -1038,6 +1043,11 @@ func (s *OpenAIGatewayService) proxyResponsesWebSocketV2Passthrough(
 					payload = next
 				}
 				usageMeta.captureRequestedReasoningEffort(originalResponseCreate)
+			}
+			if next, err := s.applyOpenAIMaxPolicyForWS(ctx, c, clientConn, account, payload); err != nil {
+				return payload, nil, err
+			} else {
+				payload = next
 			}
 			turnNo := int(completedTurns.Load()) + 1
 			if turnNo < 2 {

@@ -603,6 +603,8 @@ func registerSettingsRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		adminSettings.PUT("/beta-policy", h.Admin.Setting.UpdateBetaPolicySettings)
 		adminSettings.GET("/claude-max-policy", h.Admin.Setting.GetClaudeMaxPolicySettings)
 		adminSettings.PUT("/claude-max-policy", h.Admin.Setting.UpdateClaudeMaxPolicySettings)
+		adminSettings.GET("/openai-max-policy", h.Admin.Setting.GetOpenAIMaxPolicySettings)
+		adminSettings.PUT("/openai-max-policy", h.Admin.Setting.UpdateOpenAIMaxPolicySettings)
 		// Web Search 模拟配置
 		adminSettings.GET("/web-search-emulation", h.Admin.Setting.GetWebSearchEmulationConfig)
 		adminSettings.PUT("/web-search-emulation", h.Admin.Setting.UpdateWebSearchEmulationConfig)

@@ -1161,6 +1161,17 @@ export default {
         saved: 'Claude Max policy saved',
         saveFailed: 'Failed to save Claude Max policy',
       },
+      openaiMaxPolicy: {
+        title: 'OpenAI Max Effort Policy',
+        description: 'Pass through, block, or downgrade explicitly requested Max effort on OpenAI accounts. Supports Responses, Chat Completions, compatible Messages requests, and WebSocket turns. Other effort levels are unaffected. Passes through by default.',
+        actionDowngrade: 'Downgrade (replace Max effort)',
+        downgradeEffort: 'Downgrade target effort',
+        downgradeHint: 'Only Max is replaced; other effort levels stay unchanged. Choose an effort level supported by the target model.',
+        loadFailed: 'Failed to load the OpenAI Max policy. Retry before editing.',
+        retry: 'Reload',
+        saved: 'OpenAI Max policy saved',
+        saveFailed: 'Failed to save OpenAI Max policy',
+      },
       openaiFastPolicy: {
         title: 'OpenAI Fast/Flex Policy',
         description: 'Intercept, filter, or pass OpenAI fast(priority), ultrafast, or flex requests based on the request body service_tier field. Applies to the OpenAI gateway only. "All tier values" includes explicitly sent tiers only.',

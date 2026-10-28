@@ -98,7 +98,10 @@ func (s *OpenAIGatewayService) forwardAnthropicViaRawChatCompletions(
 			return nil, policyErr
 		}
 		if changed {
-			chatBody = policyBody
+			chatBody, policyErr = s.applyOpenAIMaxPolicyForHTTP(ctx, c, account, policyBody)
+			if policyErr != nil {
+				return nil, policyErr
+			}
 		}
 	}
 	// Provider normalization and policy caps can both change the converted effort.
