@@ -229,7 +229,7 @@ func TestApplyOpenAIFastPolicyToBody_ForcePriorityInjectsMissingTier(t *testing.
 	require.False(t, gjson.GetBytes(updated, "service_tier").Exists())
 }
 
-func TestApplyOpenAIFastPolicyToBody_LegacyAllRuleDoesNotInjectMissingTier(t *testing.T) {
+func TestApplyOpenAIFastPolicyToBody_AllForceRuleInjectsMissingTier(t *testing.T) {
 	settings := &OpenAIFastPolicySettings{
 		Rules: []OpenAIFastPolicyRule{{
 			ServiceTier: OpenAIFastTierAny,
@@ -244,7 +244,7 @@ func TestApplyOpenAIFastPolicyToBody_LegacyAllRuleDoesNotInjectMissingTier(t *te
 	updated, err := svc.applyOpenAIFastPolicyToBody(context.Background(), account, "gpt-5.5", body)
 
 	require.NoError(t, err)
-	require.Equal(t, string(body), string(updated))
+	require.Equal(t, OpenAIFastTierPriority, gjson.GetBytes(updated, "service_tier").String())
 
 	// Explicitly selected tiers continue to be forced by the existing rule.
 	body = []byte(`{"model":"gpt-5.5","service_tier":"flex"}`)

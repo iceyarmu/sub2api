@@ -1174,7 +1174,7 @@ export default {
       },
       openaiFastPolicy: {
         title: 'OpenAI Fast/Flex Policy',
-        description: 'Intercept, filter, or pass OpenAI fast(priority), ultrafast, or flex requests based on the request body service_tier field. Applies to the OpenAI gateway only. "All tier values" includes explicitly sent tiers only.',
+        description: 'Intercept, filter, or pass OpenAI fast(priority), ultrafast, or flex requests based on the request body service_tier field. Applies to the OpenAI gateway only. "All tier values" includes explicitly sent tiers only; "Force priority" ignores the incoming tier match, including requests with no tier.',
         empty: 'No rules configured. Click the button below to add one.',
         ruleHeader: 'Rule #{index}',
         removeRule: 'Remove rule',
@@ -1190,6 +1190,7 @@ export default {
         actionPass: 'Pass (keep service_tier)',
         actionFilter: 'Filter (remove service_tier)',
         actionForcePriority: 'Force priority (fast)',
+        forcePriorityHint: 'Force fast ignores this tier match, including omitted, default, and flex tiers. User, account, model scope, and rule order still apply. Other actions still require a tier match.',
         actionBlock: 'Block (reject request)',
         scope: 'Scope',
         scopeAll: 'All accounts',

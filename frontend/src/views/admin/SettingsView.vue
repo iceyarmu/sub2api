@@ -1151,6 +1151,12 @@
                       "
                       :options="openaiFastPolicyTierOptions"
                     />
+                    <p
+                      v-if="rule.action === 'force_priority' || (hasOpenAIFastPolicyTargetModels(rule) && rule.fallback_action === 'force_priority')"
+                      class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                    >
+                      {{ t("admin.settings.openaiFastPolicy.forcePriorityHint") }}
+                    </p>
                   </div>
 
                   <!-- Action -->

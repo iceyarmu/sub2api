@@ -688,7 +688,7 @@ func DefaultBetaPolicySettings() *BetaPolicySettings {
 //   - "priority"（客户端可传 "fast"，归一化为 "priority"）：fast 模式
 //   - "ultrafast"：Codex/API 的 Ultrafast 档位
 //   - "flex"：低优先级模式
-//   - 省略：normal 默认；策略中可用专用 "missing" 条件显式匹配
+//   - 省略：normal 默认；非强制策略中可用专用 "missing" 条件显式匹配
 //
 // 本策略复用 BetaPolicyAction*/BetaPolicyScope* 常量语义，只是匹配键从
 // anthropic-beta header 换成 body 的 service_tier 字段。
@@ -699,8 +699,8 @@ const (
 	OpenAIFastTierFlex      = "flex"      // 仅匹配 flex
 	OpenAIFastTierMissing   = "missing"   // 仅匹配省略 service_tier 的请求
 
-	// OpenAIFastPolicyActionForcePriority 会保留 service_tier 字段并强制写成
-	// priority，用于把 flex/auto/default/scale 等已识别 tier 收敛为 fast。
+	// OpenAIFastPolicyActionForcePriority 忽略原始 tier 匹配条件，将已识别
+	// 或省略的 service_tier 强制写成 priority；仍遵循用户、账号和模型范围。
 	OpenAIFastPolicyActionForcePriority = "force_priority"
 )
 

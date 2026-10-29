@@ -1901,9 +1901,10 @@ func (e *OpenAIFastBlockedError) Error() string { return e.Message }
 // Matching rules:
 //   - Scope filters by account type (all / oauth / apikey / bedrock)
 //   - UserIDs, when present, filters by the trusted Sub2API user that owns the API key
-//   - ServiceTier must be empty (= any), "all", "missing", or equal the normalized tier
 //   - ModelWhitelist narrows the rule to specific models; FallbackAction
 //     handles the non-matching case (default: pass)
+//   - force_priority ignores the incoming tier, including an omitted tier;
+//     other actions require ServiceTier to match the normalized tier
 //   - User-specific rules take precedence over global rules; each group keeps
 //     the configured first-match order
 //
@@ -1911,9 +1912,8 @@ func (e *OpenAIFastBlockedError) Error() string { return e.Message }
 //   - BetaPolicy 处理的是 anthropic-beta header 中的 token 集合，不同
 //     规则可能针对不同 token，filter 需要累加成 set；block 则 first-match。
 //   - OpenAI fast policy 操作的是单个字段 service_tier：filter 即删字段，
-//     没有可累加的对象。一次请求只携带一个 service_tier，规则的 tier
-//     维度天然互斥；同一 (scope, tier) 下若多条规则的 model whitelist
-//     发生重叠，admin 可通过规则顺序明确意图。因此采用 first-match 而
+//     没有可累加的对象。强制规则忽略原档位；其他规则按 tier 匹配。
+//     多条规则的生效范围发生重叠时，admin 可通过规则顺序明确意图。因此采用 first-match 而
 //     非 BetaPolicy 那样的"block 覆盖 filter 覆盖 pass"语义。
 func (s *OpenAIGatewayService) evaluateOpenAIFastPolicy(ctx context.Context, account *Account, model, serviceTier string) (action, errMsg string) {
 	if s == nil || s.settingService == nil {
@@ -1936,8 +1936,8 @@ func (s *OpenAIGatewayService) evaluateOpenAIFastPolicy(ctx context.Context, acc
 
 // shouldForceOpenAIFastPriorityForMissingTier reports whether a request that
 // omitted service_tier should be upgraded to priority. This is opt-in through
-// the dedicated "missing" tier matcher; legacy "all" rules continue to apply
-// only to requests that explicitly selected a recognized tier.
+// a force_priority action within the configured user, account and model scope,
+// regardless of the rule's incoming tier matcher.
 func (s *OpenAIGatewayService) shouldForceOpenAIFastPriorityForMissingTier(ctx context.Context, account *Account, model string) bool {
 	if account == nil || account.Platform != PlatformOpenAI {
 		return false
@@ -1967,6 +1967,22 @@ func evaluateOpenAIFastPolicyWithSettings(settings *OpenAIFastPolicySettings, us
 			if !betaPolicyScopeMatches(rule.Scope, isOAuth, isBedrock) {
 				continue
 			}
+			eff := BetaPolicyRule{
+				Action:               rule.Action,
+				ErrorMessage:         rule.ErrorMessage,
+				ModelWhitelist:       rule.ModelWhitelist,
+				FallbackAction:       rule.FallbackAction,
+				FallbackErrorMessage: rule.FallbackErrorMessage,
+			}
+			action, errMsg := resolveRuleAction(eff, model)
+			// Resolve the model action first; only OpenAI force actions bypass
+			// the tier matcher. Compatible gateways also reuse this evaluator.
+			if action == OpenAIFastPolicyActionForcePriority {
+				if account == nil || account.Platform != PlatformOpenAI {
+					continue
+				}
+				return action, errMsg
+			}
 			ruleTier := strings.ToLower(strings.TrimSpace(rule.ServiceTier))
 			if tier == OpenAIFastTierMissing {
 				if ruleTier != OpenAIFastTierMissing {
@@ -1975,14 +1991,7 @@ func evaluateOpenAIFastPolicyWithSettings(settings *OpenAIFastPolicySettings, us
 			} else if ruleTier != "" && ruleTier != OpenAIFastTierAny && ruleTier != tier {
 				continue
 			}
-			eff := BetaPolicyRule{
-				Action:               rule.Action,
-				ErrorMessage:         rule.ErrorMessage,
-				ModelWhitelist:       rule.ModelWhitelist,
-				FallbackAction:       rule.FallbackAction,
-				FallbackErrorMessage: rule.FallbackErrorMessage,
-			}
-			return resolveRuleAction(eff, model)
+			return action, errMsg
 		}
 	}
 	return BetaPolicyActionPass, ""
@@ -2053,7 +2062,7 @@ func openAIGroupForcesFast(ctx context.Context, account *Account) bool {
 // body. When action=filter it removes the service_tier field; when
 // action=block it returns (body, *OpenAIFastBlockedError). On pass it
 // normalizes the service_tier value (e.g. client alias "fast" → "priority").
-// action=force_priority rewrites any matched known tier to "priority". Before
+// action=force_priority sets "priority" regardless of the incoming tier. Before
 // the global policy is evaluated, a trusted request Group with
 // ForceOpenAIFast enabled unconditionally sets service_tier to "priority".
 // The global policy remains authoritative and may still pass, filter, or block
@@ -2153,7 +2162,7 @@ func writeOpenAIFastPolicyBlockedResponse(c *gin.Context, err *OpenAIFastBlocked
 //
 //   - pass: keeps service_tier, normalizing aliases such as "fast" to "priority"
 //   - filter: returns a copy with top-level service_tier removed
-//   - force_priority: keeps service_tier and rewrites it to "priority"
+//   - force_priority: sets service_tier to "priority", including when omitted
 //   - block: returns (frame, *OpenAIFastBlockedError)
 //   - Group ForceOpenAIFast: sets priority first, then applies the global rule
 //
