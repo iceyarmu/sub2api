@@ -273,6 +273,7 @@ func (h *OpenAIGatewayHandler) Images(c *gin.Context) {
 			service.SetOpsLatencyMs(c, service.OpsTimeToFirstTokenMsKey, int64(*result.FirstTokenMs))
 		}
 		if err != nil {
+			reqLog := reqLog.With(zap.String("account_type", account.Type)).With(service.OpenAIImagesRequestLogFields(c)...)
 			if result != nil && result.ImageCount > 0 {
 				reqLog.Warn("openai.images.forward_partial_error_with_image_result",
 					zap.Int64("account_id", account.ID),
@@ -297,12 +298,15 @@ func (h *OpenAIGatewayHandler) Images(c *gin.Context) {
 						zap.Int("status_code", imageUpstreamErr.StatusCode),
 						zap.String("error_type", imageUpstreamErr.ErrorType),
 						zap.String("error_code", imageUpstreamErr.Code),
+						zap.String("error_param", imageUpstreamErr.Param),
+						zap.String("upstream_request_id", imageUpstreamErr.UpstreamRequestID),
 						zap.Error(err),
 					)
 					return
 				}
 				var failoverErr *service.UpstreamFailoverError
 				if errors.As(err, &failoverErr) {
+					reqLog := reqLog.With(service.OpenAIImagesFailoverLogFields(failoverErr)...)
 					h.gatewayService.ReportOpenAIAccountScheduleResult(account, openAIAccountScheduleModel(c, account, requestModel, false, result), false, nil, err)
 					if service.OpenAIImagesJSONKeepaliveAdjustedWrittenSize(c) != writerSizeBeforeForward {
 						reqLog.Warn("openai.images.upstream_failover_skipped_after_flush",

@@ -609,6 +609,9 @@ func (s *OpenAIGatewayService) ForwardImages(
 	parsed *OpenAIImagesRequest,
 	channelMappedModel string,
 ) (*OpenAIForwardResult, error) {
+	if c != nil {
+		c.Set(openAIImagesRequestLogFieldsKey, nil)
+	}
 	if parsed == nil {
 		return nil, fmt.Errorf("parsed images request is required")
 	}

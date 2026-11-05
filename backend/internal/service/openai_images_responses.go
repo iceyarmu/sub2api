@@ -1865,6 +1865,8 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesOAuth(
 		upstreamReq.Header.Set("OpenAI-Beta", "responses=experimental")
 	}
 
+	setOpenAIImagesRequestLogFields(c, parsed.Model, requestModel, upstreamReq.URL.Path, responsesBody, direct)
+
 	proxyURL := ""
 	if account.ProxyID != nil && account.Proxy != nil {
 		proxyURL = account.Proxy.URL()
@@ -1888,6 +1890,7 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesOAuth(
 		})
 		return nil, fmt.Errorf("upstream request failed: %s", safeErr)
 	}
+	setOpenAIImagesResponseLogFields(c, resp)
 	if resp.StatusCode >= 400 {
 		respBody := s.readUpstreamErrorBody(resp)
 		_ = resp.Body.Close()
@@ -2149,6 +2152,7 @@ func (s *OpenAIGatewayService) handleOpenAIImagesOAuthResponseError(
 			requestID = strings.TrimSpace(resp.Header.Get("x-request-id"))
 		}
 	}
+	upstreamErr.UpstreamRequestID = requestID
 	appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
 		ProxyID:            opsUpstreamProxyID(account),
 		ProxyName:          opsUpstreamProxyName(account),

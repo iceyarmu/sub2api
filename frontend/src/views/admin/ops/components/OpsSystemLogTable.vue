@@ -159,6 +159,16 @@ const formatSystemLogDetail = (row: OpsSystemLog) => {
   if (row.model) corrParts.push(`model=${row.model}`)
   if (corrParts.length > 0) parts.push(corrParts.join(' '))
 
+  for (const key of [
+    'account_type', 'request_model', 'routing_model', 'upstream_model', 'upstream_request_model',
+    'upstream_endpoint', 'reasoning_effort', 'image_quality', 'image_complexity',
+    'error_type', 'error_code', 'error_param', 'upstream_request_id',
+    'upstream_http_status', 'upstream_content_type', 'upstream_error_message'
+  ]) {
+    const value = getExtraString(extra, key)
+    if (value) parts.push(`${key}=${value}`)
+  }
+
   const errors = getExtraString(extra, 'errors')
   if (errors) parts.push(`errors=${errors}`)
   const err = getExtraString(extra, 'err') || getExtraString(extra, 'error')
