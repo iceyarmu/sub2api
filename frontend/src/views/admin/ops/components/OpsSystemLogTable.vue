@@ -132,6 +132,7 @@ const formatSystemLogDetail = (row: OpsSystemLog) => {
 
   const extra = row.extra || {}
   const statusCode = getExtraString(extra, 'status_code')
+  const upstreamStatus = getExtraString(extra, 'upstream_status') || getExtraString(extra, 'upstream_status_code')
   const latencyMs = getExtraString(extra, 'latency_ms')
   const method = getExtraString(extra, 'method')
   const path = getExtraString(extra, 'path')
@@ -140,6 +141,7 @@ const formatSystemLogDetail = (row: OpsSystemLog) => {
 
   const accessParts: string[] = []
   if (statusCode) accessParts.push(`status=${statusCode}`)
+  if (upstreamStatus) accessParts.push(`upstream_status=${upstreamStatus}`)
   if (latencyMs) accessParts.push(`latency_ms=${latencyMs}`)
   if (method) accessParts.push(`method=${method}`)
   if (path) accessParts.push(`path=${path}`)
