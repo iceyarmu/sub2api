@@ -3031,9 +3031,11 @@ func (h *OpenAIGatewayHandler) ResponsesWebSocket(c *gin.Context) {
 				mapping, _ := h.gatewayService.ResolveChannelMappingAndRestrict(ctx, apiKey.GroupID, routeModel)
 				mappedModelUnchanged := false
 				if previous := turnChannelMapping.Load(); previous != nil && previous.turn < turn {
-					mappedModelUnchanged = strings.TrimSpace(previous.mapping.MappedModel) == strings.TrimSpace(mapping.MappedModel)
+					mappedModelUnchanged = previous.mapping.GroupMapped == mapping.GroupMapped &&
+						strings.TrimSpace(previous.mapping.MappedModel) == strings.TrimSpace(mapping.MappedModel)
 				}
-				if turn > 1 && !mappedModelUnchanged && !account.IsModelSupported(model) && !account.IsModelSupported(mapping.MappedModel) {
+				turnAccount := service.AccountForGroupRequestedModel(ctx, account, model)
+				if turn > 1 && !mappedModelUnchanged && !turnAccount.IsModelSupported(model) && !turnAccount.IsModelSupported(mapping.MappedModel) {
 					return "", newOpenAIWSUnsupportedModelSwitchError(mapping.MappedModel)
 				}
 				turnChannelMapping.Store(&openAIWSTurnChannelMappingSnapshot{turn: turn, mapping: mapping})

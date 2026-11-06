@@ -1239,6 +1239,10 @@ export default {
         fallbackHint: 'Non-Claude Code requests will use this group. Leave empty to reject directly.',
         noFallback: 'No Fallback (Reject)'
       },
+      modelMapping: {
+        title: 'Group Model Mapping',
+        hint: 'Applies to Responses, Chat Completions and other requests using this group’s API keys, independently of Messages dispatch. Sources support a trailing *; exact matches win, then the longest prefix. Matching group rules use the group target directly, skipping channel and account mappings. Unmatched requests keep the existing mapping behavior. Remove all rules to clear.',
+      },
       openaiMessages: {
         title: 'OpenAI Messages Dispatch',
         allowDispatch: 'Allow /v1/messages dispatch',

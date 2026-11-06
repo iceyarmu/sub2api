@@ -1245,6 +1245,10 @@ func init() {
 	groupDescProfitSafetyBuffer := groupFields[64].Descriptor()
 	// group.DefaultProfitSafetyBuffer holds the default value on creation for the profit_safety_buffer field.
 	group.DefaultProfitSafetyBuffer = groupDescProfitSafetyBuffer.Default.(float64)
+	// groupDescModelMapping is the schema descriptor for model_mapping field.
+	groupDescModelMapping := groupFields[65].Descriptor()
+	// group.DefaultModelMapping holds the default value on creation for the model_mapping field.
+	group.DefaultModelMapping = groupDescModelMapping.Default.(map[string]string)
 	idempotencyrecordMixin := schema.IdempotencyRecord{}.Mixin()
 	idempotencyrecordMixinFields0 := idempotencyrecordMixin[0].Fields()
 	_ = idempotencyrecordMixinFields0

@@ -19,6 +19,7 @@ import (
 
 // Forward forwards request to OpenAI API
 func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, account *Account, body []byte) (*OpenAIForwardResult, error) {
+	account = accountForGroupModelMapping(ctx, account)
 	body, policyErr := s.applyOpenAIMaxPolicyForHTTP(ctx, c, account, body)
 	if policyErr != nil {
 		return nil, policyErr

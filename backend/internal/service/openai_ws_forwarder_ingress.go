@@ -393,7 +393,7 @@ func (s *OpenAIGatewayService) ProxyResponsesWebSocketFromClient(
 				requestModel = mappedModel
 			}
 		}
-		upstreamModel := normalizeOpenAIModelForUpstream(account, account.GetMappedModel(requestModel))
+		upstreamModel := normalizeOpenAIModelForUpstream(account, AccountForGroupRequestedModel(ctx, account, originalModel).GetMappedModel(requestModel))
 		if modelMissing || upstreamModel != originalModel {
 			next, setErr := applyPayloadMutation(normalized, "model", upstreamModel)
 			if setErr != nil {
@@ -1008,7 +1008,7 @@ func (s *OpenAIGatewayService) ProxyResponsesWebSocketFromClient(
 		if originalModel != "" {
 			mappedModel = strings.TrimSpace(gjson.GetBytes(payload, "model").String())
 			if mappedModel == "" {
-				mappedModel = normalizeOpenAIModelForUpstream(account, account.GetMappedModel(originalModel))
+				mappedModel = normalizeOpenAIModelForUpstream(account, AccountForGroupRequestedModel(ctx, account, originalModel).GetMappedModel(originalModel))
 			}
 			needModelReplace = mappedModel != "" && mappedModel != originalModel
 			if needModelReplace {

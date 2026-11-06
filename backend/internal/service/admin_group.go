@@ -382,6 +382,7 @@ func normalizeCreateGroupInputForSimpleMode(input *CreateGroupInput) {
 		Name: input.Name, Description: input.Description, I18n: input.I18n, Platform: input.Platform,
 		RateMultiplier: 1, SubscriptionType: SubscriptionTypeStandard,
 		AllowMessagesDispatch:       input.AllowMessagesDispatch,
+		ModelMapping:                input.ModelMapping,
 		MessagesDispatchModelConfig: input.MessagesDispatchModelConfig,
 	}
 }
@@ -393,6 +394,7 @@ func normalizeUpdateGroupInputForSimpleMode(input *UpdateGroupInput) {
 	*input = UpdateGroupInput{
 		Name: input.Name, Description: input.Description, I18n: input.I18n,
 		AllowMessagesDispatch:       input.AllowMessagesDispatch,
+		ModelMapping:                input.ModelMapping,
 		MessagesDispatchModelConfig: input.MessagesDispatchModelConfig,
 	}
 }
@@ -413,6 +415,10 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 	}
 
 	platform := NormalizeGroupPlatform(input.Platform)
+	modelMapping, err := normalizeGroupModelMapping(platform, input.ModelMapping)
+	if err != nil {
+		return nil, err
+	}
 	// 固定账号 manifest 配置：账号绑定发生在创建之后，创建时无法校验成员关系，
 	// 拒绝开启并在创建后的编辑里配置。
 	if normalizeCodexModelsManifestConfig(platform, input.CodexModelsManifestConfig).Enabled {
@@ -636,6 +642,7 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		RequireOAuthOnly:                input.RequireOAuthOnly,
 		RequirePrivacySet:               input.RequirePrivacySet,
 		DefaultMappedModel:              input.DefaultMappedModel,
+		ModelMapping:                    modelMapping,
 		MessagesDispatchModelConfig:     normalizeOpenAIMessagesDispatchModelConfig(input.MessagesDispatchModelConfig),
 		ModelAllowlist:                  modelAllowlist,
 		// 固定账号 manifest 配置：账号绑定发生在分组创建之后，创建路径禁止开启，
@@ -1036,6 +1043,12 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 	}
 	if input.DefaultMappedModel != nil {
 		group.DefaultMappedModel = *input.DefaultMappedModel
+	}
+	if input.ModelMapping != nil || group.Platform != PlatformOpenAI {
+		group.ModelMapping, err = normalizeGroupModelMapping(group.Platform, input.ModelMapping)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if input.MessagesDispatchModelConfig != nil {
 		group.MessagesDispatchModelConfig = normalizeOpenAIMessagesDispatchModelConfig(*input.MessagesDispatchModelConfig)

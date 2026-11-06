@@ -54,6 +54,7 @@ func (s *OpenAIGatewayService) DiagnoseModelAvailabilityForPlatform(
 	}
 
 	diag := ModelAvailabilityDiagnosis{}
+	accounts = accountsForGroupModelMapping(ctx, accounts)
 	for i := range accounts {
 		diag.HasAccountsInPool = true
 		if isRetiredOpenAISubscriptionModel(&accounts[i], resolveOpenAIAccountUpstreamModelForRequest(&accounts[i], requestedModel, false)) {

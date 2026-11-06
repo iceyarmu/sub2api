@@ -145,6 +145,7 @@ type simpleModeGroupResponse struct {
 	I18n service.GroupI18n `json:"i18n,omitempty"`
 
 	AllowMessagesDispatch       bool                                      `json:"allow_messages_dispatch"`
+	ModelMapping                map[string]string                         `json:"model_mapping,omitempty"`
 	MessagesDispatchModelConfig service.OpenAIMessagesDispatchModelConfig `json:"messages_dispatch_model_config"`
 
 	AccountCount            int64     `json:"account_count,omitempty"`
@@ -168,6 +169,7 @@ func groupForSimpleMode(group *service.Group) *simpleModeGroupResponse {
 		SortOrder: group.SortOrder, CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
 
 		AllowMessagesDispatch:       group.AllowMessagesDispatch,
+		ModelMapping:                group.ModelMapping,
 		MessagesDispatchModelConfig: group.MessagesDispatchModelConfig,
 	}
 }
@@ -179,6 +181,7 @@ func sanitizeCreateGroupRequestForSimpleMode(req *CreateGroupRequest) {
 	allowed := CreateGroupRequest{
 		Name: req.Name, Description: req.Description, I18n: req.I18n, Platform: req.Platform,
 		AllowMessagesDispatch:       req.AllowMessagesDispatch,
+		ModelMapping:                req.ModelMapping,
 		MessagesDispatchModelConfig: req.MessagesDispatchModelConfig,
 	}
 	allowed.RateMultiplier = 1
@@ -193,6 +196,7 @@ func sanitizeUpdateGroupRequestForSimpleMode(req *UpdateGroupRequest) {
 	*req = UpdateGroupRequest{
 		Name: req.Name, Description: req.Description, I18n: req.I18n,
 		AllowMessagesDispatch:       req.AllowMessagesDispatch,
+		ModelMapping:                req.ModelMapping,
 		MessagesDispatchModelConfig: req.MessagesDispatchModelConfig,
 	}
 }
@@ -257,6 +261,7 @@ type CreateGroupRequest struct {
 	RequireOAuthOnly            bool                                      `json:"require_oauth_only"`
 	RequirePrivacySet           bool                                      `json:"require_privacy_set"`
 	DefaultMappedModel          string                                    `json:"default_mapped_model"`
+	ModelMapping                map[string]string                         `json:"model_mapping,omitempty"`
 	MessagesDispatchModelConfig service.OpenAIMessagesDispatchModelConfig `json:"messages_dispatch_model_config"`
 	ModelAllowlist              service.GroupModelAllowlist               `json:"model_allowlist"`
 	// 固定账号 manifest 配置；创建路径禁止开启，仅编辑可配置。
@@ -334,6 +339,7 @@ type UpdateGroupRequest struct {
 	RequireOAuthOnly            *bool                                      `json:"require_oauth_only"`
 	RequirePrivacySet           *bool                                      `json:"require_privacy_set"`
 	DefaultMappedModel          *string                                    `json:"default_mapped_model"`
+	ModelMapping                map[string]string                          `json:"model_mapping"`
 	MessagesDispatchModelConfig *service.OpenAIMessagesDispatchModelConfig `json:"messages_dispatch_model_config"`
 	ModelAllowlist              *service.GroupModelAllowlist               `json:"model_allowlist"`
 	// 固定账号 manifest 配置；nil 表示不修改。
@@ -737,6 +743,7 @@ func (h *GroupHandler) Create(c *gin.Context) {
 		RequireOAuthOnly:                req.RequireOAuthOnly,
 		RequirePrivacySet:               req.RequirePrivacySet,
 		DefaultMappedModel:              req.DefaultMappedModel,
+		ModelMapping:                    req.ModelMapping,
 		MessagesDispatchModelConfig:     req.MessagesDispatchModelConfig,
 		ModelAllowlist:                  req.ModelAllowlist,
 		CodexModelsManifestConfig:       req.CodexModelsManifestConfig,
@@ -885,6 +892,7 @@ func (h *GroupHandler) Update(c *gin.Context) {
 		RequireOAuthOnly:                req.RequireOAuthOnly,
 		RequirePrivacySet:               req.RequirePrivacySet,
 		DefaultMappedModel:              req.DefaultMappedModel,
+		ModelMapping:                    req.ModelMapping,
 		MessagesDispatchModelConfig:     req.MessagesDispatchModelConfig,
 		ModelAllowlist:                  req.ModelAllowlist,
 		CodexModelsManifestConfig:       req.CodexModelsManifestConfig,

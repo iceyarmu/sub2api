@@ -907,7 +907,7 @@ func modelSupportsAnthropicFastMode(model string) bool {
 // ResolveChannelMapping 委托渠道服务解析模型映射
 func (s *GatewayService) ResolveChannelMapping(ctx context.Context, groupID int64, model string) ChannelMappingResult {
 	if s.channelService == nil {
-		return ChannelMappingResult{MappedModel: model}
+		return applyGroupModelMapping(ctx, groupID, model, ChannelMappingResult{MappedModel: model})
 	}
 	return s.channelService.ResolveChannelMapping(ctx, groupID, model)
 }
@@ -928,10 +928,10 @@ func (s *GatewayService) IsModelRestricted(ctx context.Context, groupID int64, m
 // ResolveChannelMappingAndRestrict 解析渠道映射。
 // 模型限制检查已移至调度阶段（checkChannelPricingRestriction），restricted 始终返回 false。
 func (s *GatewayService) ResolveChannelMappingAndRestrict(ctx context.Context, groupID *int64, model string) (ChannelMappingResult, bool) {
-	if s.channelService == nil {
+	if groupID == nil {
 		return ChannelMappingResult{MappedModel: model}, false
 	}
-	return s.channelService.ResolveChannelMappingAndRestrict(ctx, groupID, model)
+	return s.ResolveChannelMapping(ctx, *groupID, model), false
 }
 
 // checkChannelPricingRestriction 根据渠道计费基准检查模型是否受定价列表限制。
@@ -941,6 +941,7 @@ func (s *GatewayService) checkChannelPricingRestriction(ctx context.Context, gro
 	if groupID == nil || s.channelService == nil || requestedModel == "" {
 		return false
 	}
+	requestedModel = groupModelMappingRequestedModel(ctx, *groupID, requestedModel)
 	mapping := s.channelService.ResolveChannelMapping(ctx, *groupID, requestedModel)
 	billingModel := billingModelForRestriction(mapping.BillingModelSource, requestedModel, mapping.MappedModel)
 	if billingModel == "" {
@@ -971,6 +972,7 @@ func billingModelForRestriction(source, requestedModel, channelMappedModel strin
 // isUpstreamModelRestrictedByChannel 检查账号映射后的上游模型是否受渠道定价限制。
 // 仅在 BillingModelSource="upstream" 且 RestrictModels=true 时由调度循环调用。
 func (s *GatewayService) isUpstreamModelRestrictedByChannel(ctx context.Context, groupID int64, account *Account, requestedModel string) bool {
+	account = accountForGroupModelMapping(ctx, account)
 	if s.channelService == nil {
 		return false
 	}

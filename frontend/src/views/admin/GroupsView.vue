@@ -1631,6 +1631,11 @@
 
         </template>
 
+        <GroupModelMappingFields
+          v-if="createForm.platform === 'openai'"
+          v-model="createForm.model_mapping"
+        />
+
         <!-- OpenAI Messages 调度配置（OpenAI 与 Composite 平台） -->
         <div
           v-if="supportsMessagesDispatchPlatform(createForm.platform)"
@@ -3298,6 +3303,11 @@
 
         </template>
 
+        <GroupModelMappingFields
+          v-if="editForm.platform === 'openai'"
+          v-model="editForm.model_mapping"
+        />
+
         <!-- OpenAI Messages 调度配置（OpenAI 与 Composite 平台） -->
         <div
           v-if="supportsMessagesDispatchPlatform(editForm.platform)"
@@ -4334,6 +4344,8 @@ import Select from "@/components/common/Select.vue";
 import PlatformIcon from "@/components/common/PlatformIcon.vue";
 import { platformLabel } from "@/utils/platformColors";
 import Icon from "@/components/icons/Icon.vue";
+import GroupModelMappingFields from "@/components/admin/group/GroupModelMappingFields.vue";
+import { groupModelMappingToAPI, groupModelMappingToRows, type GroupModelMappingRow } from "./groupsModelMapping";
 import GroupI18nField from "@/components/admin/group/GroupI18nField.vue";
 import GroupRateMultipliersModal from "@/components/admin/group/GroupRateMultipliersModal.vue";
 import GroupRPMOverridesModal from "@/components/admin/group/GroupRPMOverridesModal.vue";
@@ -5034,6 +5046,7 @@ const createForm = reactive({
   sonnet_mapped_model: createMessagesDispatchDefaults.sonnet_mapped_model,
   haiku_mapped_model: createMessagesDispatchDefaults.haiku_mapped_model,
   exact_model_mappings: [] as MessagesDispatchMappingRow[],
+  model_mapping: [] as GroupModelMappingRow[],
   // 账号过滤控制（OpenAI/Antigravity 平台）
   require_oauth_only: false,
   require_privacy_set: false,
@@ -5402,6 +5415,7 @@ const editForm = reactive({
   sonnet_mapped_model: editMessagesDispatchDefaults.sonnet_mapped_model,
   haiku_mapped_model: editMessagesDispatchDefaults.haiku_mapped_model,
   exact_model_mappings: [] as MessagesDispatchMappingRow[],
+  model_mapping: [] as GroupModelMappingRow[],
   // 账号过滤控制（OpenAI/Antigravity 平台）
   require_oauth_only: false,
   require_privacy_set: false,
@@ -5865,6 +5879,7 @@ const closeCreateModal = () => {
   createForm.fallback_group_id = null;
   createForm.fallback_group_id_on_invalid_request = null;
   resetMessagesDispatchFormState(createForm);
+  createForm.model_mapping = [];
   createForm.allow_live = false;
   createForm.require_oauth_only = false;
   createForm.require_privacy_set = false;
@@ -6003,6 +6018,7 @@ const handleCreateGroup = async () => {
         createForm.platform,
         createForm.supported_model_scopes,
       ),
+      model_mapping: createForm.platform === "openai" ? groupModelMappingToAPI(createForm.model_mapping) : undefined,
       messages_dispatch_model_config:
         createForm.platform === "openai"
           ? messagesDispatchFormStateToConfig({
@@ -6082,6 +6098,7 @@ const handleCreateGroup = async () => {
           platform: createForm.platform,
           ...(createForm.platform === "openai"
             ? {
+                model_mapping: requestData.model_mapping,
                 allow_messages_dispatch: createForm.allow_messages_dispatch,
                 messages_dispatch_model_config: requestData.messages_dispatch_model_config,
               }
@@ -6170,6 +6187,7 @@ const handleEdit = async (group: AdminGroup) => {
   editForm.fallback_group_id = group.fallback_group_id;
   editForm.fallback_group_id_on_invalid_request =
     group.fallback_group_id_on_invalid_request;
+  editForm.model_mapping = groupModelMappingToRows(group.model_mapping);
   const messagesDispatchFormState = messagesDispatchConfigToFormState(
     group.messages_dispatch_model_config,
   );
@@ -6271,6 +6289,7 @@ const closeEditModal = () => {
   editForm.audio_tts_price_per_million_chars = null;
   editForm.audio_stt_price_per_hour = null;
   resetMessagesDispatchFormState(editForm);
+  editForm.model_mapping = [];
   editForm.allow_live = false;
   resetModelAllowlistState(editModelAllowlistState);
   editCodexManifestConfig.value = createCodexManifestDefaults();
@@ -6366,6 +6385,7 @@ const handleUpdateGroup = async () => {
         editForm.platform,
         editForm.supported_model_scopes,
       ),
+      model_mapping: editForm.platform === "openai" ? groupModelMappingToAPI(editForm.model_mapping) : undefined,
       messages_dispatch_model_config:
         editForm.platform === "openai"
           ? messagesDispatchFormStateToConfig({
@@ -6446,6 +6466,7 @@ const handleUpdateGroup = async () => {
           i18n: editForm.i18n,
           ...(editForm.platform === "openai"
             ? {
+                model_mapping: payload.model_mapping,
                 allow_messages_dispatch: editForm.allow_messages_dispatch,
                 messages_dispatch_model_config: payload.messages_dispatch_model_config,
               }
@@ -6761,6 +6782,9 @@ watch(
     if (!supportsMessagesDispatchPlatform(newVal)) {
       resetMessagesDispatchFormState(createForm);
     }
+    if (newVal !== "openai") {
+      createForm.model_mapping = [];
+    }
     if (!supportsLivePlatform(newVal)) {
       createForm.allow_live = false;
     }
@@ -6818,6 +6842,9 @@ watch(
     }
     if (!supportsMessagesDispatchPlatform(newVal)) {
       resetMessagesDispatchFormState(editForm);
+    }
+    if (newVal !== "openai") {
+      editForm.model_mapping = [];
     }
     if (!supportsLivePlatform(newVal)) {
       editForm.allow_live = false;

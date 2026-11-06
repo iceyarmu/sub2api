@@ -67,6 +67,9 @@ type Account struct {
 	GroupIDs      []int64
 	Groups        []*Group
 
+	// Request-local only: a matched group mapping is final for this request.
+	groupModelMappingFinal bool
+
 	// model_mapping 热路径缓存（非持久化字段）
 	modelMappingCache               map[string]string
 	modelMappingCacheReady          bool
@@ -1000,6 +1003,9 @@ func (a *Account) GetMappedModel(requestedModel string) string {
 // ResolveMappedModel 获取映射后的模型名，并返回是否命中了账号级映射。
 // matched=true 表示命中了精确映射或通配符映射，即使映射结果与原模型名相同。
 func (a *Account) ResolveMappedModel(requestedModel string) (mappedModel string, matched bool) {
+	if a.groupModelMappingFinal {
+		return requestedModel, true
+	}
 	mapping := a.GetModelMapping()
 	if len(mapping) == 0 {
 		return requestedModel, false
@@ -1077,6 +1083,9 @@ func (a *Account) GetCompactModelMapping() map[string]string {
 // ResolveCompactMappedModel resolves compact-only model remapping and reports
 // whether a compact-specific mapping rule matched.
 func (a *Account) ResolveCompactMappedModel(requestedModel string) (mappedModel string, matched bool) {
+	if a != nil && a.groupModelMappingFinal {
+		return requestedModel, true
+	}
 	mapping := a.GetCompactModelMapping()
 	if len(mapping) == 0 {
 		return requestedModel, false

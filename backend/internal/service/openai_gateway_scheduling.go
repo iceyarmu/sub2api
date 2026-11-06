@@ -1504,6 +1504,7 @@ func (s *OpenAIGatewayService) listSchedulableAccounts(ctx context.Context, grou
 		if err != nil {
 			return accounts, err
 		}
+		accounts = accountsForGroupModelMapping(ctx, accounts)
 		accounts = s.filterOpenAIAccountsBySchedulingThreshold(ctx, accounts)
 		if platform == PlatformGrok {
 			accounts = s.filterGrokFreeQuotaAccountsForOpenAI(ctx, accounts)
@@ -1522,6 +1523,7 @@ func (s *OpenAIGatewayService) listSchedulableAccounts(ctx context.Context, grou
 	if err != nil {
 		return nil, fmt.Errorf("query accounts failed: %w", err)
 	}
+	accounts = accountsForGroupModelMapping(ctx, accounts)
 	accounts = s.filterOpenAIAccountsBySchedulingThreshold(ctx, accounts)
 	if platform == PlatformGrok {
 		accounts = s.filterGrokFreeQuotaAccountsForOpenAI(ctx, accounts)
@@ -1553,7 +1555,7 @@ func (s *OpenAIGatewayService) resolveFreshSchedulableOpenAIAccountBeforeProfit(
 	}
 	platform = NormalizeOpenAICompatiblePlatform(platform)
 
-	fresh := account
+	fresh := accountForGroupModelMapping(ctx, account)
 	if s.schedulerSnapshot != nil {
 		current, err := s.getSchedulableAccount(ctx, account.ID)
 		if err != nil || current == nil {
@@ -1606,6 +1608,7 @@ func (s *OpenAIGatewayService) recheckSelectedOpenAIAccountFromDB(ctx context.Co
 }
 
 func (s *OpenAIGatewayService) recheckSelectedOpenAIAccountFromDBBeforeProfit(ctx context.Context, account *Account, groupID *int64, platform string, requestedModel string, requireCompact bool, requiredCapability OpenAIEndpointCapability) *Account {
+	account = accountForGroupModelMapping(ctx, account)
 	if account == nil {
 		return nil
 	}
@@ -1633,6 +1636,7 @@ func (s *OpenAIGatewayService) recheckSelectedOpenAIAccountFromDBBeforeProfit(ct
 	if err != nil || latest == nil {
 		return nil
 	}
+	latest = accountForGroupModelMapping(ctx, latest)
 	if !s.openAIAccountMatchesSchedulingGroup(latest, groupID) {
 		return nil
 	}
@@ -1686,7 +1690,7 @@ func (s *OpenAIGatewayService) getSchedulableAccount(ctx context.Context, accoun
 			return nil, nil
 		}
 	}
-	return account, nil
+	return accountForGroupModelMapping(ctx, account), nil
 }
 
 // filterGrokFreeQuotaAccountsForOpenAI applies the same local free soft-gate as

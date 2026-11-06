@@ -311,6 +311,10 @@ func (Group) Fields() []ent.Field {
 			SchemaType(map[string]string{dialect.Postgres: "decimal(10,4)"}).
 			Default(0).
 			Comment("安全缓冲，小数；与 margin 相加后从下游倍率中扣除，默认 0"),
+		field.JSON("model_mapping", map[string]string{}).
+			Default(map[string]string{}).
+			SchemaType(map[string]string{dialect.Postgres: "jsonb"}).
+			Comment("OpenAI 分组通用模型映射，命中后不再应用账号映射"),
 	}
 }
 

@@ -110,6 +110,7 @@ type ChannelMappingResult struct {
 	MappedModel        string // 映射后的模型名（无映射时等于原始模型名）
 	ChannelID          int64  // 渠道 ID（0 = 无渠道关联）
 	Mapped             bool   // 是否发生了映射
+	GroupMapped        bool   // 是否命中分组映射（跳过账号映射）
 	BillingModelSource string // 计费模型来源（"requested" / "upstream" / "channel_mapped" / "response_model"）
 }
 
@@ -571,9 +572,9 @@ func (s *ChannelService) ResolveChannelMapping(ctx context.Context, groupID int6
 		slog.Warn("failed to load channel cache for mapping", "group_id", groupID, "error", err)
 	}
 	if lk == nil {
-		return ChannelMappingResult{MappedModel: model}
+		return applyGroupModelMapping(ctx, groupID, model, ChannelMappingResult{MappedModel: model})
 	}
-	return resolveMapping(lk, groupID, model)
+	return applyGroupModelMapping(ctx, groupID, model, resolveMapping(lk, groupID, model))
 }
 
 // IsModelRestricted 检查模型是否被渠道限制。
@@ -597,11 +598,7 @@ func (s *ChannelService) ResolveChannelMappingAndRestrict(ctx context.Context, g
 	if groupID == nil {
 		return ChannelMappingResult{MappedModel: model}, false
 	}
-	lk, _ := s.lookupGroupChannel(ctx, *groupID)
-	if lk == nil {
-		return ChannelMappingResult{MappedModel: model}, false
-	}
-	return resolveMapping(lk, *groupID, model), false
+	return s.ResolveChannelMapping(ctx, *groupID, model), false
 }
 
 // resolveMapping 基于已查找的渠道信息解析模型映射。

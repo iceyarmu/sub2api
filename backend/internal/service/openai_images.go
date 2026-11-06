@@ -609,6 +609,7 @@ func (s *OpenAIGatewayService) ForwardImages(
 	parsed *OpenAIImagesRequest,
 	channelMappedModel string,
 ) (*OpenAIForwardResult, error) {
+	account = accountForGroupModelMapping(ctx, account)
 	if c != nil {
 		c.Set(openAIImagesRequestLogFieldsKey, nil)
 	}

@@ -926,6 +926,12 @@ func (_c *GroupCreate) SetNillableProfitSafetyBuffer(v *float64) *GroupCreate {
 	return _c
 }
 
+// SetModelMapping sets the "model_mapping" field.
+func (_c *GroupCreate) SetModelMapping(v map[string]string) *GroupCreate {
+	_c.mutation.SetModelMapping(v)
+	return _c
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_c *GroupCreate) AddAPIKeyIDs(ids ...int64) *GroupCreate {
 	_c.mutation.AddAPIKeyIDs(ids...)
@@ -1239,6 +1245,10 @@ func (_c *GroupCreate) defaults() error {
 		v := group.DefaultProfitSafetyBuffer
 		_c.mutation.SetProfitSafetyBuffer(v)
 	}
+	if _, ok := _c.mutation.ModelMapping(); !ok {
+		v := group.DefaultModelMapping
+		_c.mutation.SetModelMapping(v)
+	}
 	return nil
 }
 
@@ -1451,6 +1461,9 @@ func (_c *GroupCreate) check() error {
 	}
 	if _, ok := _c.mutation.ProfitSafetyBuffer(); !ok {
 		return &ValidationError{Name: "profit_safety_buffer", err: errors.New(`ent: missing required field "Group.profit_safety_buffer"`)}
+	}
+	if _, ok := _c.mutation.ModelMapping(); !ok {
+		return &ValidationError{Name: "model_mapping", err: errors.New(`ent: missing required field "Group.model_mapping"`)}
 	}
 	return nil
 }
@@ -1750,6 +1763,10 @@ func (_c *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ProfitSafetyBuffer(); ok {
 		_spec.SetField(group.FieldProfitSafetyBuffer, field.TypeFloat64, value)
 		_node.ProfitSafetyBuffer = value
+	}
+	if value, ok := _c.mutation.ModelMapping(); ok {
+		_spec.SetField(group.FieldModelMapping, field.TypeJSON, value)
+		_node.ModelMapping = value
 	}
 	if nodes := _c.mutation.APIKeysIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -2984,6 +3001,18 @@ func (u *GroupUpsert) UpdateProfitSafetyBuffer() *GroupUpsert {
 // AddProfitSafetyBuffer adds v to the "profit_safety_buffer" field.
 func (u *GroupUpsert) AddProfitSafetyBuffer(v float64) *GroupUpsert {
 	u.Add(group.FieldProfitSafetyBuffer, v)
+	return u
+}
+
+// SetModelMapping sets the "model_mapping" field.
+func (u *GroupUpsert) SetModelMapping(v map[string]string) *GroupUpsert {
+	u.Set(group.FieldModelMapping, v)
+	return u
+}
+
+// UpdateModelMapping sets the "model_mapping" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateModelMapping() *GroupUpsert {
+	u.SetExcluded(group.FieldModelMapping)
 	return u
 }
 
@@ -4292,6 +4321,20 @@ func (u *GroupUpsertOne) AddProfitSafetyBuffer(v float64) *GroupUpsertOne {
 func (u *GroupUpsertOne) UpdateProfitSafetyBuffer() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateProfitSafetyBuffer()
+	})
+}
+
+// SetModelMapping sets the "model_mapping" field.
+func (u *GroupUpsertOne) SetModelMapping(v map[string]string) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetModelMapping(v)
+	})
+}
+
+// UpdateModelMapping sets the "model_mapping" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateModelMapping() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateModelMapping()
 	})
 }
 
@@ -5766,6 +5809,20 @@ func (u *GroupUpsertBulk) AddProfitSafetyBuffer(v float64) *GroupUpsertBulk {
 func (u *GroupUpsertBulk) UpdateProfitSafetyBuffer() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateProfitSafetyBuffer()
+	})
+}
+
+// SetModelMapping sets the "model_mapping" field.
+func (u *GroupUpsertBulk) SetModelMapping(v map[string]string) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetModelMapping(v)
+	})
+}
+
+// UpdateModelMapping sets the "model_mapping" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateModelMapping() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateModelMapping()
 	})
 }
 

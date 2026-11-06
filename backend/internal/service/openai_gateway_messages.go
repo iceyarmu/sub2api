@@ -33,6 +33,7 @@ func (s *OpenAIGatewayService) ForwardAsAnthropic(
 	promptCacheKey string,
 	defaultMappedModel string,
 ) (*OpenAIForwardResult, error) {
+	account = accountForGroupModelMapping(ctx, account)
 	body, maxPolicyErr := s.applyOpenAIMaxPolicyForHTTP(ctx, c, account, body)
 	if maxPolicyErr != nil {
 		return nil, maxPolicyErr

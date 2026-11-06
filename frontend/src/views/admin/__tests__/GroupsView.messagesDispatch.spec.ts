@@ -103,6 +103,7 @@ describe('GroupsView Messages dispatch in simple mode', () => {
     expect(createGroup).toHaveBeenCalledWith({
       name: 'Simple OpenAI', description: '', i18n: {}, platform: 'openai',
       allow_messages_dispatch: true,
+      model_mapping: {},
       messages_dispatch_model_config: {
         opus_mapped_model: 'gpt-5.4', sonnet_mapped_model: 'gpt-5.4',
         haiku_mapped_model: 'gpt-5.4-mini', exact_model_mappings: {},
@@ -133,6 +134,7 @@ describe('GroupsView Messages dispatch in simple mode', () => {
     await flushPromises()
     expect(updateGroup).toHaveBeenLastCalledWith(42, {
       name: group.name, description: '', i18n: {}, allow_messages_dispatch: true,
+      model_mapping: {},
       messages_dispatch_model_config: { ...mapping, sonnet_mapped_model: 'gpt-5.4' },
     })
 
@@ -144,6 +146,7 @@ describe('GroupsView Messages dispatch in simple mode', () => {
     expect(showError).not.toHaveBeenCalled()
     expect(updateGroup).toHaveBeenLastCalledWith(42, {
       name: group.name, description: '', i18n: {}, allow_messages_dispatch: false,
+      model_mapping: {},
       messages_dispatch_model_config: mapping,
     })
     wrapper.unmount()

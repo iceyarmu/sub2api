@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"time"
@@ -151,6 +152,7 @@ func cloneGroupForDuplicate(source *Group, operationID string) *Group {
 		RequireOAuthOnly:                source.RequireOAuthOnly,
 		RequirePrivacySet:               source.RequirePrivacySet,
 		DefaultMappedModel:              source.DefaultMappedModel,
+		ModelMapping:                    maps.Clone(source.ModelMapping),
 		MessagesDispatchModelConfig:     cloneGroupMessagesDispatchModelConfig(source.MessagesDispatchModelConfig),
 		ModelAllowlist: GroupModelAllowlist{
 			Enabled: source.ModelAllowlist.Enabled,

@@ -143,6 +143,7 @@ func createGroupRecord(ctx context.Context, client *dbent.Client, groupIn *servi
 		SetRequirePrivacySet(groupIn.RequirePrivacySet).
 		SetDefaultMappedModel(groupIn.DefaultMappedModel).
 		SetMessagesDispatchModelConfig(groupIn.MessagesDispatchModelConfig).
+		SetModelMapping(groupIn.ModelMapping).
 		SetModelAllowlist(service.DomainGroupModelAllowlist(groupIn.ModelAllowlist)).
 		SetCodexModelsManifestConfig(groupIn.CodexModelsManifestConfig).
 		SetRpmLimit(groupIn.RPMLimit).
@@ -328,6 +329,7 @@ func (r *groupRepository) Update(ctx context.Context, groupIn *service.Group) er
 		SetRequirePrivacySet(groupIn.RequirePrivacySet).
 		SetDefaultMappedModel(groupIn.DefaultMappedModel).
 		SetMessagesDispatchModelConfig(groupIn.MessagesDispatchModelConfig).
+		SetModelMapping(groupIn.ModelMapping).
 		SetModelAllowlist(service.DomainGroupModelAllowlist(groupIn.ModelAllowlist)).
 		SetCodexModelsManifestConfig(groupIn.CodexModelsManifestConfig).
 		SetRpmLimit(groupIn.RPMLimit).
