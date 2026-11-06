@@ -80,3 +80,11 @@ describe('AppSidebar subscription feature flag', () => {
     expect(componentSource).toMatch(/path: '\/purchase'[^\n]*label: purchaseNavLabel\.value/)
   })
 })
+
+describe('AppSidebar simple-mode channel mapping access', () => {
+  it('keeps channel pricing available while hiding channel monitoring', () => {
+    expect(componentSource).toMatch(/path: '\/admin\/channels',[\s\S]*?expandOnly: true,[\s\S]*?path: '\/admin\/channels\/pricing'/)
+    expect(componentSource).toMatch(/path: '\/admin\/channels\/monitor',[^\n]*hideInSimpleMode: true/)
+    expect(componentSource).toContain('!authStore.isSimpleMode || !child.hideInSimpleMode')
+  })
+})
