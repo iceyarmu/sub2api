@@ -81,14 +81,6 @@ describe('AppSidebar subscription feature flag', () => {
   })
 })
 
-describe('AppSidebar simple-mode channel mapping access', () => {
-  it('keeps channel pricing available while hiding channel monitoring', () => {
-    expect(componentSource).toMatch(/path: '\/admin\/channels',[\s\S]*?expandOnly: true,[\s\S]*?path: '\/admin\/channels\/pricing'/)
-    expect(componentSource).toMatch(/path: '\/admin\/channels\/monitor',[^\n]*hideInSimpleMode: true/)
-    expect(componentSource).toContain('!authStore.isSimpleMode || !child.hideInSimpleMode')
-  })
-})
-
 describe('AppSidebar MCP entry', () => {
   it('uses the MCP logo and shows the entry only when the deployment enables MCP', () => {
     expect(componentSource).toContain("render: () => h(Icon, { name: 'mcp' })")

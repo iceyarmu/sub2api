@@ -63,18 +63,17 @@
               </button>
               <!-- Children -->
               <div v-if="!sidebarCollapsed && isGroupExpanded(item)" class="mb-1 ml-4 border-l border-gray-200 pl-2 dark:border-dark-600">
-                <template v-for="child in item.children" :key="child.path">
-                  <router-link
-                    v-if="!authStore.isSimpleMode || !child.hideInSimpleMode"
-                    :to="child.path"
-                    class="sidebar-link mb-0.5 py-1.5 text-sm"
-                    :class="{ 'sidebar-link-active': route.path === child.path }"
-                    @click="handleMenuItemClick(child.path)"
-                  >
-                    <component :is="child.icon" class="h-4 w-4 flex-shrink-0" />
-                    <span>{{ child.label }}</span>
-                  </router-link>
-                </template>
+                <router-link
+                  v-for="child in item.children"
+                  :key="child.path"
+                  :to="child.path"
+                  class="sidebar-link mb-0.5 py-1.5 text-sm"
+                  :class="{ 'sidebar-link-active': route.path === child.path }"
+                  @click="handleMenuItemClick(child.path)"
+                >
+                  <component :is="child.icon" class="h-4 w-4 flex-shrink-0" />
+                  <span>{{ child.label }}</span>
+                </router-link>
               </div>
             </template>
             <!-- Normal item (no children) -->
@@ -790,10 +789,11 @@ const adminNavItems = computed((): NavItem[] => {
       path: '/admin/channels',
       label: t('nav.channelManagement'),
       icon: ChannelIcon,
+      hideInSimpleMode: true,
       expandOnly: true,
       children: [
         { path: '/admin/channels/pricing', label: t('nav.channelPricing'), icon: PriceTagIcon },
-        { path: '/admin/channels/monitor', label: t('nav.channelMonitor'), icon: SignalIcon, hideInSimpleMode: true, featureFlag: flagChannelMonitor },
+        { path: '/admin/channels/monitor', label: t('nav.channelMonitor'), icon: SignalIcon, featureFlag: flagChannelMonitor },
       ],
     },
     // 「仅充值」站点连管理端的「订阅管理」入口也一并收起（路由本身不拦截）。
