@@ -130,6 +130,65 @@ describe('AccountUsageCell', () => {
     })
   })
 
+  it.each(['anthropic', 'openai'] as const)('%s API Key skips usage queries on mount and refresh', async (platform) => {
+    const requestBatchedUsage = vi.fn()
+    const wrapper = mount(AccountUsageCell, {
+      props: {
+        account: makeAccount({ id: 9201, platform, type: 'apikey' }),
+        manualRefreshToken: 0,
+        todayStats: { requests: 3, tokens: 100, cost: 0.25, standard_cost: 0.25 }
+      },
+      global: { stubs: { UsageProgressBar: true, AccountQuotaInfo: true } }
+    })
+
+    await flushPromises()
+    await wrapper.setProps({ manualRefreshToken: 1 })
+    await flushPromises()
+    // A late child event must obey the same eligibility guard as automatic loads.
+    await (wrapper.vm as unknown as { loadActiveUsage: () => Promise<void> }).loadActiveUsage()
+    expect(getUsage).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('3 req')
+    expect(wrapper.text()).toContain('A $0.25')
+
+    await wrapper.setProps({ requestBatchedUsage })
+    await wrapper.setProps({ manualRefreshToken: 2 })
+    await flushPromises()
+    expect(requestBatchedUsage).not.toHaveBeenCalled()
+    expect(getUsage).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it.each([
+    ['anthropic', 'oauth'],
+    ['anthropic', 'setup-token'],
+    ['openai', 'oauth']
+  ] as const)('%s %s still supports the active usage button', async (platform, type) => {
+    getUsage.mockResolvedValue({ five_hour: { utilization: 25 } })
+    const wrapper = mount(AccountUsageCell, {
+      props: {
+        account: makeAccount({ id: 9202, platform, type }),
+        requestBatchedUsage: vi.fn(),
+        batchedUsage: { source: 'passive', five_hour: { utilization: 10 } }
+      },
+      global: {
+        stubs: {
+          UsageProgressBar: true,
+          AccountQuotaInfo: true,
+          ClaudeResetCreditsCell: { template: '<div><slot name="pre-actions" /></div>' }
+        }
+      }
+    })
+
+    await flushPromises()
+    const button = wrapper.findAll('button').find((item) => item.text().includes('admin.accounts.usageWindow.activeQuery'))
+    expect(button).toBeDefined()
+    await button!.trigger('click')
+    await flushPromises()
+    expect(getUsage).toHaveBeenCalledTimes(1)
+    expect(getUsage).toHaveBeenCalledWith(9202, 'active', true)
+    wrapper.unmount()
+  })
+
   it('renders eligible Ollama Cloud state and forwards query updates', async () => {
     const wrapper = mount(AccountUsageCell, {
       props: {

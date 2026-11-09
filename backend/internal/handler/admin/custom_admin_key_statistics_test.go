@@ -5,7 +5,9 @@ package admin
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -50,6 +52,50 @@ func TestScopedAdminStatisticsRejectBeforeCacheOrService(t *testing.T) {
 			r.ServeHTTP(w, httptest.NewRequest(method, path, strings.NewReader(`{"account_ids":[1,2]}`)))
 			require.Equal(t, 404, w.Code, w.Body.String())
 		})
+	}
+}
+
+func TestScopedAdminUsageUnsupportedAPIKey(t *testing.T) {
+	for _, platform := range []string{service.PlatformAnthropic, service.PlatformOpenAI} {
+		for _, source := range []string{"active", "passive"} {
+			for _, tc := range []struct {
+				name       string
+				permission string
+				repoError  error
+				wantStatus int
+			}{
+				{"unsupported", "accounts.usage.read", nil, http.StatusBadRequest},
+				{"unauthorized", "accounts.read", nil, http.StatusNotFound},
+				{"repository failure", "accounts.usage.read", errors.New("private database details"), http.StatusBadGateway},
+			} {
+				t.Run(platform+"/"+source+"/"+tc.name, func(t *testing.T) {
+					account := &service.Account{ID: 22, Platform: platform, Type: service.AccountTypeAPIKey, GroupIDs: []int64{1}}
+					repo := &unsupportedUsageAccountRepo{account: account, err: tc.repoError}
+					h := &AccountHandler{
+						adminService: &scopedStatisticsAccounts{accounts: map[int64]*service.Account{22: account}},
+						accountUsageService: service.NewAccountUsageService(
+							repo, nil, nil, nil, nil, nil, nil, nil, service.NewUsageCache(), nil, nil,
+						),
+					}
+					policy := statisticsPolicy(tc.permission)
+					policy.Rules[0].Platforms = []string{platform}
+					policy.Rules[0].AccountTypes = []string{service.AccountTypeAPIKey}
+					router := gin.New()
+					router.Use(func(c *gin.Context) {
+						c.Request = c.Request.WithContext(adminaccess.WithPrincipal(c.Request.Context(), &adminaccess.Principal{Policy: policy}))
+					})
+					router.Use(h.ScopedAdminKeyAccounts)
+					router.GET("/api/v1/admin/accounts/:id/usage", func(c *gin.Context) { t.Fatal("must not call unrestricted handler") })
+					recorder := httptest.NewRecorder()
+
+					router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/admin/accounts/22/usage?source="+source, nil))
+
+					require.Equal(t, tc.wantStatus, recorder.Code, recorder.Body.String())
+					require.Equal(t, tc.wantStatus == http.StatusBadRequest, strings.Contains(recorder.Body.String(), "ACCOUNT_USAGE_NOT_SUPPORTED"))
+					require.NotContains(t, recorder.Body.String(), "private database details")
+				})
+			}
+		}
 	}
 }
 

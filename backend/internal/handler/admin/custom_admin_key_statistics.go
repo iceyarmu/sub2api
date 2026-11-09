@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/adminaccess"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
@@ -147,6 +148,10 @@ func (h *AccountHandler) scopedAdminStatistics(c *gin.Context) bool {
 			u, err = h.accountUsageService.GetPassiveUsage(c.Request.Context(), id)
 		} else {
 			u, err = h.accountUsageService.GetUsage(c.Request.Context(), id, c.Query("force") == "true")
+		}
+		if infraerrors.Reason(err) == "ACCOUNT_USAGE_NOT_SUPPORTED" {
+			response.ErrorFrom(c, err)
+			return true
 		}
 		if err != nil || u == nil {
 			response.Error(c, 502, "账户额度查询失败")

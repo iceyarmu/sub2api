@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/adminaccess"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	httppool "github.com/Wei-Shaw/sub2api/internal/pkg/httpclient"
 	openaipkg "github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
@@ -507,7 +508,7 @@ func (s *AccountUsageService) getUsageForAccount(ctx context.Context, account *A
 	}
 
 	// API Key账号不支持usage查询
-	return nil, fmt.Errorf("account type %s does not support usage query", account.Type)
+	return nil, infraerrors.BadRequest("ACCOUNT_USAGE_NOT_SUPPORTED", fmt.Sprintf("account type %s does not support usage query", account.Type))
 }
 
 // GetUsage 获取账号使用量
@@ -640,7 +641,7 @@ func (s *AccountUsageService) getPassiveUsageForAccount(ctx context.Context, acc
 		return nil, err
 	}
 	if !supportsAnthropicPassiveUsage(account) {
-		return nil, fmt.Errorf("passive usage only supported for Anthropic OAuth/SetupToken accounts")
+		return nil, infraerrors.BadRequest("ACCOUNT_USAGE_NOT_SUPPORTED", "passive usage only supported for Anthropic OAuth/SetupToken accounts")
 	}
 
 	// 复用 estimateSetupTokenUsage 构建 5h 窗口（OAuth 和 SetupToken 逻辑一致）
