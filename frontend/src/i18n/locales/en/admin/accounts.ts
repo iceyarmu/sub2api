@@ -809,7 +809,7 @@ export default {
       },
       anthropic: {
         normalAPIMode: 'Normal API mode',
-        normalAPIModeDesc: 'Remove Claude Code identity markers while preserving tools and conversation content. Off by default; also applies to auto passthrough.',
+        normalAPIModeDesc: 'Use the native Anthropic API Key header profile of Hermes Agent and replace leading Claude Code system identities and remove attribution markers, preserving task instructions, tools and conversation content. Off by default; also applies to auto passthrough.',
         apiKeyPassthrough: 'Auto passthrough (auth only)',
         apiKeyPassthroughDesc:
           'Only applies to Anthropic API Key accounts. When enabled, messages/count_tokens are forwarded in passthrough mode with auth replacement only, while billing/concurrency/audit and safety filtering are preserved. Disable to roll back immediately.',

@@ -923,7 +923,7 @@ export default {
       },
       anthropic: {
         normalAPIMode: '普通 API 模式',
-        normalAPIModeDesc: '移除转发请求中的 Claude Code 身份标记，保留工具调用与对话内容。默认关闭，开启后同样作用于自动透传。',
+        normalAPIModeDesc: '按 Hermes Agent 的原生 Anthropic API Key 请求头形态转发，替换系统提示词开头的 Claude Code 身份声明并移除归因标记，保留业务指令、工具调用与对话内容。默认关闭，开启后同样作用于自动透传。',
         apiKeyPassthrough: '自动透传（仅替换认证）',
         apiKeyPassthroughDesc:
           '仅对 Anthropic API Key 生效。开启后，messages/count_tokens 请求将透传上游并仅替换认证，保留计费/并发/审计及必要安全过滤；关闭即可回滚到现有兼容链路。',

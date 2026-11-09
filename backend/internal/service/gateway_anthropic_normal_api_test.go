@@ -95,7 +95,7 @@ func TestAnthropicNormalAPIOutboundPaths(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, retry.Close())
 			require.Equal(t, actual, retryBody)
-			require.Equal(t, "sub2api", req.UserAgent())
+			require.Equal(t, "Anthropic/Python 0.125.0", req.UserAgent())
 			require.Empty(t, getHeaderRaw(req.Header, "x-app"))
 			require.Empty(t, getHeaderRaw(req.Header, "x-claude-code-session-id"))
 			require.Empty(t, getHeaderRaw(req.Header, "x-claude-code-agent-id"))
@@ -130,7 +130,14 @@ func TestAnthropicNormalAPISystemAndMetadata(t *testing.T) {
 			body := []byte(tc.body)
 			req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
 			req.Header.Set("Anthropic-Beta", "claude-code-20250219,oauth-2025-04-20")
-			require.JSONEq(t, tc.want, string(applyAnthropicNormalAPI(account, req, body)))
+			out := applyAnthropicNormalAPI(account, req, body)
+			require.JSONEq(t, tc.want, string(out))
+			wire, err := io.ReadAll(req.Body)
+			require.NoError(t, err)
+			require.Equal(t, out, wire)
+			require.Equal(t, int64(len(out)), req.ContentLength)
+			require.Equal(t, tc.body, string(body), "must not mutate the original prompt")
+			require.Equal(t, out, applyAnthropicNormalAPI(account, req, out), "prompt rewriting must be idempotent")
 			require.Empty(t, getHeaderRaw(req.Header, "anthropic-beta"))
 		})
 	}
@@ -146,6 +153,64 @@ func TestAnthropicNormalAPIPreservesSystemExamples(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			require.Equal(t, tc.want, normalAPISystemText(tc.input))
+		})
+	}
+}
+
+func TestAnthropicNormalAPIHermesHeaders(t *testing.T) {
+	account := &Account{Platform: PlatformAnthropic, Type: AccountTypeAPIKey, Extra: map[string]any{"anthropic_normal_api": true}}
+	for _, tc := range []struct {
+		name, path, body string
+		stream           bool
+	}{
+		{"stream", "/v1/messages", `{"stream":true}`, true},
+		{"create", "/v1/messages", `{"stream":false}`, false},
+		{"default", "/v1/messages", `{}`, false},
+		{"count", "/v1/messages/count_tokens", `{"stream":true}`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, tc.path, strings.NewReader(tc.body))
+			// Include noncanonical overrides as well as stale Node/browser markers.
+			req.Header = http.Header{
+				"USER-AGENT": {"sub2api"}, "user-agent": {"claude-cli/2.1.258"},
+				"ACCEPT": {"text/event-stream"}, "CONTENT-TYPE": {"text/plain"},
+				"ANTHROPIC-VERSION": {"old-version"},
+				"X-STAINLESS-LANG":  {"js"}, "x-stainless-runtime": {"node"},
+				"X-Stainless-Helper-Method": {"stream"}, "X-Stainless-Stream-Helper": {"messages"},
+				"X-Stainless-Custom": {"stale"}, "X-Client-Request-Id": {"session"},
+				"Anthropic-Dangerous-Direct-Browser-Access": {"true"}, "Sec-Fetch-Mode": {"cors"},
+				"Accept-Language": {"*"}, "X-App": {"cli"}, "X-Claude-Code-Agent-Id": {"agent"},
+				"X-Anthropic-Billing-Header": {"cc_version=2.1.258"},
+				"X-Api-Key":                  {"test-key"}, "X-Custom-Routing": {"keep"},
+			}
+			applyAnthropicNormalAPI(account, req, []byte(tc.body))
+			// Captured with anthropic==0.125.0 and httpx.MockTransport using
+			// Hermes' API-key client options (Linux/x64, CPython 3.14.8).
+			want := map[string]string{
+				"user-agent": "Anthropic/Python 0.125.0", "accept": "application/json",
+				"content-type": "application/json", "anthropic-version": "2023-06-01",
+				"x-stainless-lang": "python", "x-stainless-package-version": "0.125.0",
+				"x-stainless-os": "Linux", "x-stainless-arch": "x64",
+				"x-stainless-runtime": "CPython", "x-stainless-runtime-version": "3.14.8",
+				"x-stainless-async": "false", "x-stainless-retry-count": "0",
+				"x-stainless-read-timeout": "900.0", "x-stainless-timeout": "NOT_GIVEN",
+				"x-api-key": "test-key", "x-custom-routing": "keep",
+			}
+			if tc.stream {
+				want["x-stainless-helper-method"] = "stream"
+				want["x-stainless-stream-helper"] = "messages"
+			}
+			got := make(map[string]string)
+			for name, values := range req.Header {
+				lower := strings.ToLower(name)
+				require.NotContains(t, got, lower, "duplicate header %s", name)
+				require.Len(t, values, 1)
+				got[lower] = values[0]
+			}
+			require.Equal(t, want, got)
+			headers := req.Header.Clone()
+			applyAnthropicNormalAPI(account, req, []byte(tc.body))
+			require.Equal(t, headers, req.Header)
 		})
 	}
 }
@@ -176,7 +241,7 @@ func TestAnthropicNormalAPIAccountConnectionTest(t *testing.T) {
 			c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
 			require.NoError(t, svc.testClaudeAccountConnection(c, account, "claude-haiku-4-5"))
 			if enabled {
-				require.Equal(t, "sub2api", upstream.lastReq.UserAgent())
+				require.Equal(t, "Anthropic/Python 0.125.0", upstream.lastReq.UserAgent())
 				require.Equal(t, "You are a coding assistant.", gjson.GetBytes(upstream.lastBody, "system.0.text").String())
 				require.False(t, gjson.GetBytes(upstream.lastBody, "metadata.user_id").Exists())
 				require.NotContains(t, getHeaderRaw(upstream.lastReq.Header, "anthropic-beta"), "claude-code-")
