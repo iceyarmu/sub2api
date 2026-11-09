@@ -616,6 +616,7 @@ get_current_version() {
 
 # Download and extract
 download_and_extract() {
+    local stop_service="${1:-false}"
     local version_num=${LATEST_VERSION#v}
     local archive_name="sub2api_${version_num}_${OS}_${ARCH}.tar.gz"
     local download_url="https://github.com/${DOWNLOAD_GITHUB_REPO}/releases/download/${LATEST_VERSION}/${archive_name}"
@@ -628,15 +629,20 @@ download_and_extract() {
     trap "rm -rf $TEMP_DIR" EXIT
 
     # Download archive
-    if ! curl -sL "$download_url" -o "$TEMP_DIR/$archive_name"; then
+    if ! curl -fsSL --retry 3 "$download_url" -o "$TEMP_DIR/$archive_name"; then
         print_error "$(msg 'download_failed')"
         exit 1
     fi
 
     # Download and verify checksum
     print_info "$(msg 'verifying_checksum')"
-    if curl -sL "$checksum_url" -o "$TEMP_DIR/checksums.txt" 2>/dev/null; then
-        local expected_checksum=$(grep "$archive_name" "$TEMP_DIR/checksums.txt" | awk '{print $1}')
+    if curl -fsSL --retry 3 "$checksum_url" -o "$TEMP_DIR/checksums.txt"; then
+        local expected_checksum
+        expected_checksum=$(awk -v name="$archive_name" '$2 == name || $2 == "*" name {print tolower($1)}' "$TEMP_DIR/checksums.txt")
+        if [[ ! "$expected_checksum" =~ ^[0-9a-fA-F]{64}$ ]]; then
+            print_error "$(msg 'checksum_failed'): checksums.txt — $archive_name"
+            exit 1
+        fi
         local actual_checksum=$(sha256sum "$TEMP_DIR/$archive_name" | awk '{print $1}')
 
         if [ "$expected_checksum" != "$actual_checksum" ]; then
@@ -647,12 +653,23 @@ download_and_extract() {
         fi
         print_success "$(msg 'checksum_verified')"
     else
-        print_warning "$(msg 'checksum_not_found')"
+        print_error "$(msg 'checksum_not_found'): $checksum_url"
+        exit 1
     fi
 
     # Extract
     print_info "$(msg 'extracting')"
     tar -xzf "$TEMP_DIR/$archive_name" -C "$TEMP_DIR"
+    if [ ! -f "$TEMP_DIR/sub2api" ]; then
+        print_error "$(msg 'download_failed'): sub2api not found in $archive_name"
+        exit 1
+    fi
+
+    # Stop only after download, checksum verification and extraction succeed.
+    if [ "$stop_service" = "true" ] && systemctl is-active --quiet sub2api; then
+        print_info "$(msg 'stopping_service')"
+        systemctl stop sub2api
+    fi
 
     # Create install directory
     mkdir -p "$INSTALL_DIR"
@@ -867,19 +884,13 @@ upgrade() {
     CURRENT_VERSION=$("$INSTALL_DIR/sub2api" --version 2>/dev/null | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
     print_info "$(msg 'current_version'): $CURRENT_VERSION"
 
-    # Stop service
-    if systemctl is-active --quiet sub2api; then
-        print_info "$(msg 'stopping_service')"
-        systemctl stop sub2api
-    fi
-
     # Backup current binary
     cp "$INSTALL_DIR/sub2api" "$INSTALL_DIR/sub2api.backup"
     print_info "$(msg 'backup_created'): $INSTALL_DIR/sub2api.backup"
 
     # Download and install new version
     get_latest_version
-    download_and_extract
+    download_and_extract true
 
     # Set permissions
     chown "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR/sub2api"
@@ -918,12 +929,6 @@ install_version() {
         print_warning "$(msg 'same_version')"
     fi
 
-    # Stop service if running
-    if systemctl is-active --quiet sub2api; then
-        print_info "$(msg 'stopping_service')"
-        systemctl stop sub2api
-    fi
-
     # Backup current binary (for potential recovery)
     if [ -f "$INSTALL_DIR/sub2api" ]; then
         local backup_name
@@ -940,7 +945,7 @@ install_version() {
     LATEST_VERSION="$target_version"
 
     # Download and install
-    download_and_extract
+    download_and_extract true
 
     # Set permissions
     chown "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR/sub2api"
