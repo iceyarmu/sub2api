@@ -2093,3 +2093,24 @@ describe('EditAccountModal temp-unschedulable rule scope', () => {
     wrapper.unmount()
   })
 })
+
+describe('EditAccountModal normal API mode', () => {
+  it('loads and disables the opt-in while preserving unrelated extra settings', async () => {
+    const account = { ...buildAccount(), platform: 'anthropic', extra: { anthropic_normal_api: true, anthropic_passthrough: true } }
+    updateAccountMock.mockReset().mockResolvedValue(account)
+    checkMixedChannelRiskMock.mockReset().mockResolvedValue({ has_risk: false })
+    const wrapper = mountModal(account)
+    const selector = '[aria-label="admin.accounts.anthropic.normalAPIMode"]'
+    expect(wrapper.get(selector).attributes('aria-checked')).toBe('true')
+    await wrapper.get(selector).trigger('click')
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+    expect(updateAccountMock).toHaveBeenCalledOnce()
+    expect(updateAccountMock.mock.calls[0]?.[1]?.extra).not.toHaveProperty('anthropic_normal_api')
+    expect(updateAccountMock.mock.calls[0]?.[1]?.extra?.anthropic_passthrough).toBe(true)
+    await wrapper.setProps({ account: { ...account, id: 2, extra: {} } })
+    expect(wrapper.get(selector).attributes('aria-checked')).toBe('false')
+    await wrapper.setProps({ account: { ...account, type: 'oauth' } })
+    expect(wrapper.find(selector).exists()).toBe(false)
+    wrapper.unmount()
+  })
+})

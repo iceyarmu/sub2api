@@ -1060,3 +1060,23 @@ describe('CreateAccountModal Vertex API key auth', () => {
     expect(wrapper.find('[data-testid="vertex-api-key-input"]').exists()).toBe(false)
   })
 })
+
+describe('CreateAccountModal normal API mode', () => {
+  it.each([false, true])('saves the Claude API Key opt-in as %s', async (enabled) => {
+    authIsSimpleMode.value = true
+    createAccountMock.mockReset().mockResolvedValue({ id: 42, platform: 'anthropic', type: 'apikey' })
+    probeUpstreamBillingMock.mockReset().mockResolvedValue({})
+    const wrapper = mountModal()
+    await selectButtonByText(wrapper, 'admin.accounts.claudeConsole')
+    const toggle = wrapper.get('[aria-label="admin.accounts.anthropic.normalAPIMode"]')
+    expect(toggle.attributes('aria-checked')).toBe('false')
+    if (enabled) await toggle.trigger('click')
+    await wrapper.get('form#create-account-form input[type="text"]').setValue('Claude API')
+    await wrapper.get('form#create-account-form input[type="password"]').setValue('test-api-key')
+    await wrapper.get('form#create-account-form').trigger('submit.prevent')
+    await flushPromises()
+    expect(createAccountMock).toHaveBeenCalledOnce()
+    expect(createAccountMock.mock.calls[0]?.[0]?.extra?.anthropic_normal_api).toBe(enabled || undefined)
+    wrapper.unmount()
+  })
+})

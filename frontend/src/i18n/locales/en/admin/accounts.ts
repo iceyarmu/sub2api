@@ -808,6 +808,8 @@ export default {
         noResponseBody: 'No response body from server'
       },
       anthropic: {
+        normalAPIMode: 'Normal API mode',
+        normalAPIModeDesc: 'Remove Claude Code identity markers while preserving tools and conversation content. Off by default; also applies to auto passthrough.',
         apiKeyPassthrough: 'Auto passthrough (auth only)',
         apiKeyPassthroughDesc:
           'Only applies to Anthropic API Key accounts. When enabled, messages/count_tokens are forwarded in passthrough mode with auth replacement only, while billing/concurrency/audit and safety filtering are preserved. Disable to roll back immediately.',
