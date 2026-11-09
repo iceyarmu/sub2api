@@ -1044,7 +1044,7 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 	if input.DefaultMappedModel != nil {
 		group.DefaultMappedModel = *input.DefaultMappedModel
 	}
-	if input.ModelMapping != nil || group.Platform != PlatformOpenAI {
+	if input.ModelMapping != nil || !supportsGroupModelMapping(group.Platform) {
 		group.ModelMapping, err = normalizeGroupModelMapping(group.Platform, input.ModelMapping)
 		if err != nil {
 			return nil, err

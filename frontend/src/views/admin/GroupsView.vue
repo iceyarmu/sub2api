@@ -1632,7 +1632,7 @@
         </template>
 
         <GroupModelMappingFields
-          v-if="createForm.platform === 'openai'"
+          v-if="createForm.platform === 'openai' || createForm.platform === 'anthropic'"
           v-model="createForm.model_mapping"
         />
 
@@ -3304,7 +3304,7 @@
         </template>
 
         <GroupModelMappingFields
-          v-if="editForm.platform === 'openai'"
+          v-if="editForm.platform === 'openai' || editForm.platform === 'anthropic'"
           v-model="editForm.model_mapping"
         />
 
@@ -6018,7 +6018,7 @@ const handleCreateGroup = async () => {
         createForm.platform,
         createForm.supported_model_scopes,
       ),
-      model_mapping: createForm.platform === "openai" ? groupModelMappingToAPI(createForm.model_mapping) : undefined,
+      model_mapping: ["openai", "anthropic"].includes(createForm.platform) ? groupModelMappingToAPI(createForm.model_mapping) : undefined,
       messages_dispatch_model_config:
         createForm.platform === "openai"
           ? messagesDispatchFormStateToConfig({
@@ -6096,9 +6096,9 @@ const handleCreateGroup = async () => {
           description: createForm.description,
           i18n: createForm.i18n,
           platform: createForm.platform,
+          model_mapping: requestData.model_mapping,
           ...(createForm.platform === "openai"
             ? {
-                model_mapping: requestData.model_mapping,
                 allow_messages_dispatch: createForm.allow_messages_dispatch,
                 messages_dispatch_model_config: requestData.messages_dispatch_model_config,
               }
@@ -6385,7 +6385,7 @@ const handleUpdateGroup = async () => {
         editForm.platform,
         editForm.supported_model_scopes,
       ),
-      model_mapping: editForm.platform === "openai" ? groupModelMappingToAPI(editForm.model_mapping) : undefined,
+      model_mapping: ["openai", "anthropic"].includes(editForm.platform) ? groupModelMappingToAPI(editForm.model_mapping) : undefined,
       messages_dispatch_model_config:
         editForm.platform === "openai"
           ? messagesDispatchFormStateToConfig({
@@ -6464,9 +6464,9 @@ const handleUpdateGroup = async () => {
           name: editForm.name,
           description: editForm.description,
           i18n: editForm.i18n,
+          model_mapping: payload.model_mapping,
           ...(editForm.platform === "openai"
             ? {
-                model_mapping: payload.model_mapping,
                 allow_messages_dispatch: editForm.allow_messages_dispatch,
                 messages_dispatch_model_config: payload.messages_dispatch_model_config,
               }
@@ -6782,7 +6782,7 @@ watch(
     if (!supportsMessagesDispatchPlatform(newVal)) {
       resetMessagesDispatchFormState(createForm);
     }
-    if (newVal !== "openai") {
+    if (!["openai", "anthropic"].includes(newVal)) {
       createForm.model_mapping = [];
     }
     if (!supportsLivePlatform(newVal)) {
@@ -6843,7 +6843,7 @@ watch(
     if (!supportsMessagesDispatchPlatform(newVal)) {
       resetMessagesDispatchFormState(editForm);
     }
-    if (newVal !== "openai") {
+    if (!["openai", "anthropic"].includes(newVal)) {
       editForm.model_mapping = [];
     }
     if (!supportsLivePlatform(newVal)) {

@@ -156,7 +156,7 @@ type Group struct {
 	ProfitMinMargin float64 `json:"profit_min_margin,omitempty"`
 	// 安全缓冲，小数；与 margin 相加后从下游倍率中扣除，默认 0
 	ProfitSafetyBuffer float64 `json:"profit_safety_buffer,omitempty"`
-	// OpenAI 分组通用模型映射，命中后不再应用账号映射
+	// OpenAI/Anthropic 分组通用模型映射，命中后不再应用账号映射
 	ModelMapping map[string]string `json:"model_mapping,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the GroupQuery when eager-loading is set.

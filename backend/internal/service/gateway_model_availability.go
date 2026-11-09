@@ -58,6 +58,7 @@ func (s *GatewayService) DiagnoseModelAvailabilityForPlatform(
 		return ModelAvailabilityDiagnosis{HasAccountsInPool: true, HasModelSupport: true}
 	}
 	requestedModel = strings.TrimSpace(requestedModel)
+	ctx, requestedModel = withGroupModelMappingForSelection(ctx, groupID, requestedModel)
 	if requestedModel == "" {
 		// No model specified — cannot decide model_not_found. Caller falls back to 503.
 		return ModelAvailabilityDiagnosis{HasAccountsInPool: true, HasModelSupport: true}

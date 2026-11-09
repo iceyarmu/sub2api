@@ -58,7 +58,7 @@ func TestGroupModelMappingResolution(t *testing.T) {
 	}
 	require.Equal(t, base, applyGroupModelMapping(ctx, 8, "alias", base))
 	require.Equal(t, base, applyGroupModelMapping(context.Background(), group.ID, "alias", base))
-	group.Platform = PlatformAnthropic
+	group.Platform = PlatformGemini
 	require.Equal(t, base, applyGroupModelMapping(ctx, group.ID, "alias", base))
 	group.Platform = PlatformOpenAI
 	openai := &OpenAIGatewayService{}

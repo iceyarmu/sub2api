@@ -314,7 +314,7 @@ func (Group) Fields() []ent.Field {
 		field.JSON("model_mapping", map[string]string{}).
 			Default(map[string]string{}).
 			SchemaType(map[string]string{dialect.Postgres: "jsonb"}).
-			Comment("OpenAI 分组通用模型映射，命中后不再应用账号映射"),
+			Comment("OpenAI/Anthropic 分组通用模型映射，命中后不再应用账号映射"),
 	}
 }
 

@@ -106,7 +106,8 @@ func (h *GatewayHandler) Responses(c *gin.Context) {
 	c.Request = c.Request.WithContext(requestCtx)
 
 	// 解析渠道级模型映射
-	channelMapping, _ := h.gatewayService.ResolveChannelMappingAndRestrict(requestCtx, apiKey.GroupID, reqModel)
+	requestCtx, channelMapping := h.gatewayService.ResolveRequestModelMapping(requestCtx, apiKey.GroupID, reqModel)
+	c.Request = c.Request.WithContext(requestCtx)
 
 	// Claude Code only restriction: /v1/responses is never a Claude Code
 	// endpoint. With a fallback group the request continues and account selection

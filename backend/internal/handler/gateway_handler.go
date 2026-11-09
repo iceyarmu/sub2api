@@ -189,9 +189,6 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 	}
 	reqLog = reqLog.With(zap.String("model", reqModel), zap.Bool("stream", reqStream))
 
-	// 解析渠道级模型映射
-	channelMapping, _ := h.gatewayService.ResolveChannelMappingAndRestrict(c.Request.Context(), apiKey.GroupID, reqModel)
-
 	// 设置 max_tokens=1 + haiku 探测请求标识到 context 中
 	// 必须在 SetClaudeCodeClientContext 之前设置，因为 ClaudeCodeValidator 需要读取此标识进行绕过判断
 	if isMaxTokensOneHaikuRequest(reqModel, parsedReq.MaxTokens) {
@@ -213,6 +210,9 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 
 	setOpsRequestContext(c, reqModel, reqStream)
 	setOpsEndpointContext(c, "", int16(service.RequestTypeFromLegacy(reqStream, false)))
+	// 解析渠道级模型映射
+	mappingCtx, channelMapping := h.gatewayService.ResolveRequestModelMapping(c.Request.Context(), apiKey.GroupID, reqModel)
+	c.Request = c.Request.WithContext(mappingCtx)
 	pricingCtx, pricingAt := service.WithGatewayTokenRequestPricing(c.Request.Context())
 	c.Request = c.Request.WithContext(pricingCtx)
 
@@ -1044,6 +1044,10 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 						}
 						// 兜底重试按"直接请求兜底分组"处理：清除强制平台，允许按分组平台调度
 						ctx := context.WithValue(c.Request.Context(), ctxkey.ForcePlatform, "")
+						if channelMapping.GroupMapped || len(fallbackGroup.ModelMapping) > 0 {
+							ctx = context.WithValue(ctx, ctxkey.Group, fallbackGroup)
+							ctx, channelMapping = h.gatewayService.ResolveRequestModelMapping(ctx, fallbackAPIKey.GroupID, reqModel)
+						}
 						c.Request = c.Request.WithContext(ctx)
 						currentAPIKey = fallbackAPIKey
 						currentSubscription = nil
@@ -2233,6 +2237,14 @@ func (h *GatewayHandler) CountTokens(c *gin.Context) {
 	sessionHash := h.gatewayService.GenerateSessionHash(parsedReq)
 
 	// 选择支持该模型的账号
+	mappingCtx, countTokensMapping := h.gatewayService.ResolveRequestModelMapping(c.Request.Context(), apiKey.GroupID, parsedReq.Model)
+	c.Request = c.Request.WithContext(mappingCtx)
+	if countTokensMapping.GroupMapped {
+		if err := parsedReq.ReplaceBody(h.gatewayService.ReplaceModelInBody(parsedReq.Body.Bytes(), countTokensMapping.MappedModel)); err != nil {
+			h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body")
+			return
+		}
+	}
 	account, err := h.gatewayService.SelectAccountForModel(c.Request.Context(), apiKey.GroupID, sessionHash, parsedReq.Model)
 	if err != nil {
 		reqLog.Warn("gateway.count_tokens_select_account_failed", zap.Error(err))

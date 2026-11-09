@@ -1239,7 +1239,7 @@ export default {
       },
       modelMapping: {
         title: '分组模型映射',
-        hint: '用于此分组 API Key 的 Responses、Chat Completions 等请求，无需启用 Messages 调度。源模型支持末尾 *，精确匹配优先，其次最长前缀；命中时直接使用分组目标模型，不再应用渠道或账号映射；未命中时沿用原有映射规则。删除全部规则可清空。',
+        hint: '用于此分组 API Key 的 Messages、Responses、Chat Completions 等请求。源模型支持末尾 *，精确匹配优先，其次最长前缀；命中时使用分组目标模型，跳过渠道和账号的模型名称映射，推理强度策略仍然生效；未命中时沿用原有映射规则。删除全部规则可清空。',
       },
       openaiMessages: {
         title: 'OpenAI Messages 调度配置',

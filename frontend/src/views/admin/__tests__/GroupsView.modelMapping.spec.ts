@@ -73,11 +73,11 @@ function mountView() {
   })
 }
 
-describe('GroupsView group model mapping in simple mode', () => {
+describe.each(['openai', 'anthropic'])('GroupsView %s group model mapping in simple mode', (platform) => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
-    listGroups.mockResolvedValue({ items: [sourceGroup], total: 1, page: 1, page_size: 20, pages: 1 })
+    listGroups.mockResolvedValue({ items: [{ ...sourceGroup, platform }], total: 1, page: 1, page_size: 20, pages: 1 })
   })
 
   it('creates mapping directly on the group with Messages dispatch disabled', async () => {
@@ -86,8 +86,11 @@ describe('GroupsView group model mapping in simple mode', () => {
     await flushPromises()
     await wrapper.get('[data-tour="groups-create-btn"]').trigger('click')
     await wrapper.get('[data-tour="group-form-name"]').setValue('Mapped group')
+    expect(wrapper.find('[data-testid="group-model-mapping"]').exists()).toBe(true)
+    wrapper.findComponent('[data-tour="group-form-platform"]').vm.$emit('update:modelValue', 'gemini')
+    await flushPromises()
     expect(wrapper.find('[data-testid="group-model-mapping"]').exists()).toBe(false)
-    wrapper.findComponent('[data-tour="group-form-platform"]').vm.$emit('update:modelValue', 'openai')
+    wrapper.findComponent('[data-tour="group-form-platform"]').vm.$emit('update:modelValue', platform)
     await flushPromises()
     const form = wrapper.get('#create-group-form')
     await form.get('[data-testid="add-model-mapping"]').trigger('click')
@@ -97,13 +100,14 @@ describe('GroupsView group model mapping in simple mode', () => {
     await flushPromises()
     expect(showError).not.toHaveBeenCalled()
     expect(createGroup).toHaveBeenCalledWith(expect.objectContaining({
-      platform: 'openai', allow_messages_dispatch: false, model_mapping: { 'alias-*': 'gpt-5.4' },
+      platform, model_mapping: { 'alias-*': 'gpt-5.4' },
+      ...(platform === 'openai' ? { allow_messages_dispatch: false } : {}),
     }))
     wrapper.unmount()
   })
 
   it('loads, updates, reopens and clears the group mapping independently of Messages', async () => {
-    let savedGroup = { ...sourceGroup, model_mapping: { alias: 'gpt-5.4' } as Record<string, string> }
+    let savedGroup = { ...sourceGroup, platform, model_mapping: { alias: 'gpt-5.4' } as Record<string, string> }
     listGroups.mockImplementation(async () => ({ items: [savedGroup], total: 1, page: 1, page_size: 20, pages: 1 }))
     updateGroup.mockImplementation(async (_id, payload) => { savedGroup = { ...savedGroup, ...payload }; return savedGroup })
     const wrapper = mountView()
@@ -114,13 +118,13 @@ describe('GroupsView group model mapping in simple mode', () => {
       return wrapper.get('#edit-group-form')
     }
     let form = await openEdit()
-    expect(form.get('[role="switch"]').attributes('aria-checked')).toBe('false')
+    if (platform === 'openai') expect(form.get('[role="switch"]').attributes('aria-checked')).toBe('false')
     expect(form.get<HTMLInputElement>('[data-testid="mapping-source"]').element.value).toBe('alias')
     expect(form.get<HTMLInputElement>('[data-testid="mapping-target"]').element.value).toBe('gpt-5.4')
     await form.get('[data-testid="mapping-target"]').setValue('gpt-5.5')
     await form.trigger('submit')
     await flushPromises()
-    expect(updateGroup).toHaveBeenLastCalledWith(42, expect.objectContaining({ model_mapping: { alias: 'gpt-5.5' }, allow_messages_dispatch: false }))
+    expect(updateGroup).toHaveBeenLastCalledWith(42, expect.objectContaining({ model_mapping: { alias: 'gpt-5.5' }, ...(platform === 'openai' ? { allow_messages_dispatch: false } : {}) }))
     form = await openEdit()
     expect(form.get<HTMLInputElement>('[data-testid="mapping-target"]').element.value).toBe('gpt-5.5')
     await form.get('[data-testid="remove-model-mapping"]').trigger('click')

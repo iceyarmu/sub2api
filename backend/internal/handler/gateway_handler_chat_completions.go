@@ -102,7 +102,8 @@ func (h *GatewayHandler) ChatCompletions(c *gin.Context) {
 	c.Request = c.Request.WithContext(pricingCtx)
 
 	// 解析渠道级模型映射
-	channelMapping, _ := h.gatewayService.ResolveChannelMappingAndRestrict(c.Request.Context(), apiKey.GroupID, reqModel)
+	mappingCtx, channelMapping := h.gatewayService.ResolveRequestModelMapping(c.Request.Context(), apiKey.GroupID, reqModel)
+	c.Request = c.Request.WithContext(mappingCtx)
 
 	// Claude Code only restriction: /v1/chat/completions is never a Claude Code
 	// endpoint. With a fallback group the request continues and account selection

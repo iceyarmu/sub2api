@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
@@ -13,8 +14,14 @@ import (
 )
 
 func TestGroupModelMappingSimpleModeAPI(t *testing.T) {
+	for _, platform := range []string{service.PlatformOpenAI, service.PlatformAnthropic} {
+		t.Run(platform, func(t *testing.T) { testGroupModelMappingSimpleModeAPI(t, platform) })
+	}
+}
+
+func testGroupModelMappingSimpleModeAPI(t *testing.T, platform string) {
 	svc := newStubAdminService()
-	group := service.Group{ID: 7, Name: "mapped", Platform: service.PlatformOpenAI, ModelMapping: map[string]string{"alias": "gpt-5.4"}}
+	group := service.Group{ID: 7, Name: "mapped", Platform: platform, ModelMapping: map[string]string{"alias": "gpt-5.4"}}
 	svc.groups = []service.Group{group}
 	router := newSimpleModeGroupRouter(svc)
 	for _, tc := range []struct{ method, path, body string }{
@@ -24,7 +31,7 @@ func TestGroupModelMappingSimpleModeAPI(t *testing.T) {
 		{http.MethodGet, "/groups/all", ""},
 	} {
 		t.Run(tc.method+tc.path, func(t *testing.T) {
-			req := httptest.NewRequest(tc.method, tc.path, bytes.NewBufferString(tc.body))
+			req := httptest.NewRequest(tc.method, tc.path, bytes.NewBufferString(strings.ReplaceAll(tc.body, `"platform":"openai"`, `"platform":"`+platform+`"`)))
 			req.Header.Set("Content-Type", "application/json")
 			res := httptest.NewRecorder()
 			router.ServeHTTP(res, req)

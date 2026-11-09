@@ -1241,7 +1241,7 @@ export default {
       },
       modelMapping: {
         title: 'Group Model Mapping',
-        hint: 'Applies to Responses, Chat Completions and other requests using this group’s API keys, independently of Messages dispatch. Sources support a trailing *; exact matches win, then the longest prefix. Matching group rules use the group target directly, skipping channel and account mappings. Unmatched requests keep the existing mapping behavior. Remove all rules to clear.',
+        hint: 'Applies to Messages, Responses, Chat Completions and other requests using this group’s API keys. Sources support a trailing *; exact matches win, then the longest prefix. Matching group rules use the group target, skipping channel and account model name mappings; reasoning effort policies still apply. Unmatched requests keep the existing mapping behavior. Remove all rules to clear.',
       },
       openaiMessages: {
         title: 'OpenAI Messages Dispatch',
