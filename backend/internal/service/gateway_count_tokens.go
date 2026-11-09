@@ -37,11 +37,18 @@ func (s *GatewayService) ForwardCountTokens(ctx context.Context, c *gin.Context,
 			if resolved, ok := ResolveBedrockModelID(account, validationModel); ok {
 				validationModel = resolved
 			}
+		} else if account.IsAnthropicOAuthOrSetupToken() {
+			validationModel = claudeOAuthModelForValidation(ctx, c, account, parsed, true)
 		} else if account.Type == AccountTypeAPIKey {
 			validationModel = account.GetMappedModel(validationModel)
 		}
 	}
 	if account != nil && account.Platform == PlatformAnthropic {
+		if body, changed := normalizeClaude55Thinking(parsed.Body.Bytes(), validationModel); changed {
+			if err := parsed.ReplaceBody(body); err != nil {
+				return fmt.Errorf("rewrite count_tokens body: %w", err)
+			}
+		}
 		if err := validateClaude55Request(parsed.Body.Bytes(), validationModel); err != nil {
 			s.countTokensError(c, http.StatusBadRequest, "invalid_request_error", err.Error())
 			return err

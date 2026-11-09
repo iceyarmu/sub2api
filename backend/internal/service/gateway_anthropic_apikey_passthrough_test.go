@@ -1815,7 +1815,7 @@ func TestOpus55ThinkingDefaultPreservesSignedHistory(t *testing.T) {
 
 func TestSonnet55RejectsUnsupportedParametersBeforeMimicry(t *testing.T) {
 	fields := []string{
-		`"thinking":{"type":"disabled"}`,
+		`"thinking":{"type":"disabled"},"output_config":{"effort":"xhigh"}`,
 		`"thinking":{"type":"enabled","budget_tokens":1024}`,
 		`"thinking":{"type":"between_tools"},"output_config":{"effort":"xhigh"}`,
 		`"thinking":{"type":"between_tools","display":"summarized"}`,
