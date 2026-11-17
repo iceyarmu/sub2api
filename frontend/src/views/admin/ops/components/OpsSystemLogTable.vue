@@ -132,7 +132,6 @@ const formatSystemLogDetail = (row: OpsSystemLog) => {
 
   const extra = row.extra || {}
   const statusCode = getExtraString(extra, 'status_code')
-  const upstreamStatus = getExtraString(extra, 'upstream_status') || getExtraString(extra, 'upstream_status_code')
   const latencyMs = getExtraString(extra, 'latency_ms')
   const method = getExtraString(extra, 'method')
   const path = getExtraString(extra, 'path')
@@ -141,7 +140,6 @@ const formatSystemLogDetail = (row: OpsSystemLog) => {
 
   const accessParts: string[] = []
   if (statusCode) accessParts.push(`status=${statusCode}`)
-  if (upstreamStatus) accessParts.push(`upstream_status=${upstreamStatus}`)
   if (latencyMs) accessParts.push(`latency_ms=${latencyMs}`)
   if (method) accessParts.push(`method=${method}`)
   if (path) accessParts.push(`path=${path}`)
@@ -158,16 +156,6 @@ const formatSystemLogDetail = (row: OpsSystemLog) => {
   if (row.platform) corrParts.push(`platform=${row.platform}`)
   if (row.model) corrParts.push(`model=${row.model}`)
   if (corrParts.length > 0) parts.push(corrParts.join(' '))
-
-  for (const key of [
-    'account_type', 'request_model', 'routing_model', 'upstream_model', 'upstream_request_model',
-    'upstream_endpoint', 'reasoning_effort', 'image_quality', 'image_complexity',
-    'error_type', 'error_code', 'error_param', 'upstream_request_id',
-    'upstream_http_status', 'upstream_content_type', 'upstream_error_message'
-  ]) {
-    const value = getExtraString(extra, key)
-    if (value) parts.push(`${key}=${value}`)
-  }
 
   const errors = getExtraString(extra, 'errors')
   if (errors) parts.push(`errors=${errors}`)

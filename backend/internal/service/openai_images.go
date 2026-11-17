@@ -688,9 +688,6 @@ func (s *OpenAIGatewayService) ForwardImages(
 	channelMappedModel string,
 ) (*OpenAIForwardResult, error) {
 	account = accountForGroupModelMapping(ctx, account)
-	if c != nil {
-		c.Set(openAIImagesRequestLogFieldsKey, nil)
-	}
 	if parsed == nil {
 		return nil, fmt.Errorf("parsed images request is required")
 	}
