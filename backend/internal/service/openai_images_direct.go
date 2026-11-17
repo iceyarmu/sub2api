@@ -27,14 +27,11 @@ func isOpenAIImagesForceResponses(ctx context.Context) bool {
 	return forced
 }
 
-func shouldUseOpenAIImagesDirect(ctx context.Context, forceResponses bool, model string) bool {
-	return usesCodexDirectImages(model) && !forceResponses && !isOpenAIImagesForceResponses(ctx)
-}
-
 // 显式列出已接入的模型，不把未来模型或未知快照自动送到直调端点。
 func usesCodexDirectImages(model string) bool {
 	switch strings.TrimSpace(model) {
 	case "gpt-image-1.5", "gpt-image-2",
+		"gpt-image-2.6-flare", "gpt-image-2.6-sunburst",
 		"gpt-image-2.5-flare", "gpt-image-2.5-sunburst",
 		"gpt-image-2.5-flare-2026-09-08", "gpt-image-2.5-sunburst-2026-09-08":
 		return true

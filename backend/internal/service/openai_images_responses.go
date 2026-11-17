@@ -1839,13 +1839,7 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesOAuth(
 	if err := validateOpenAIImagesModel(upstreamModel); err != nil {
 		return nil, err
 	}
-	forceResponses := isOpenAIImagesForceResponses(ctx)
-	if s != nil && s.settingService != nil {
-		forceResponses = forceResponses || s.settingService.IsOpenAIImagesForceResponsesEnabled(ctx)
-	} else if s != nil && s.cfg != nil {
-		forceResponses = forceResponses || s.cfg.Gateway.ForceOpenAIImagesResponses
-	}
-	direct := shouldUseOpenAIImagesDirect(ctx, forceResponses, upstreamModel)
+	direct := usesCodexDirectImages(upstreamModel) && !isOpenAIImagesForceResponses(ctx)
 	beginUpstreamResponseModelObservation(c)
 	SetOpsUpstreamModel(c, upstreamModel)
 	uploadParts := make([]string, 0, len(parsed.Uploads))
